@@ -28,18 +28,26 @@ export default function Home() {
     if (!isRecording) {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-        const mr = new MediaRecorder(stream, { mimeType: 'audio/webm' })
+
+        const mimeType = MediaRecorder.isTypeSupported('audio/webm')
+          ? 'audio/webm'
+          : MediaRecorder.isTypeSupported('audio/mp4')
+          ? 'audio/mp4'
+          : 'audio/ogg'
+
+        const mr = new MediaRecorder(stream, { mimeType })
         audioChunksRef.current = []
-        mr.ondataavailable = (e) => audioChunksRef.current.push(e.data)
+        mr.ondataavailable = (e) => { if (e.data.size > 0) audioChunksRef.current.push(e.data) }
         mr.onstop = async () => {
           stream.getTracks().forEach(t => t.stop())
           setIsRecording(false)
           setAudioReady('transcribiendo')
 
           try {
-            const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' })
+            const extension = mimeType.includes('mp4') ? 'mp4' : mimeType.includes('ogg') ? 'ogg' : 'webm'
+            const blob = new Blob(audioChunksRef.current, { type: mimeType })
             const formData = new FormData()
-            formData.append('audio', blob, 'audio.webm')
+            formData.append('audio', blob, `audio.${extension}`)
 
             const res = await fetch('/api/transcribir', {
               method: 'POST',
@@ -51,13 +59,15 @@ export default function Home() {
               setInputText(prev => prev ? prev + ' ' + data.texto : data.texto)
               setAudioReady('listo')
             } else {
+              console.error('Error transcripción:', data.error)
               setAudioReady('error')
             }
-          } catch {
+          } catch (err) {
+            console.error('Error al enviar audio:', err)
             setAudioReady('error')
           }
         }
-        mr.start()
+        mr.start(1000)
         mediaRecorderRef.current = mr
         setIsRecording(true)
       } catch {
