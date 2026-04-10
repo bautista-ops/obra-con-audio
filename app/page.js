@@ -24,55 +24,53 @@ export default function Home() {
     if (t === 'minuta') setResolucion(null)
   }
 
-  const toggleRecording = async () => {
+  const toggleRecording = () => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
+    if (!SpeechRecognition) {
+      alert('Tu navegador no soporta reconocimiento de voz. Usá Chrome en Android o Safari en iPhone.')
+      return
+    }
+
     if (!isRecording) {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const recognition = new SpeechRecognition()
+      recognition.lang = 'es-AR'
+      recognition.continuous = true
+      recognition.interimResults = true
+      mediaRecorderRef.current = recognition
+      let finalTranscript = ''
 
-        const mimeType = MediaRecorder.isTypeSupported('audio/webm')
-          ? 'audio/webm'
-          : MediaRecorder.isTypeSupported('audio/mp4')
-          ? 'audio/mp4'
-          : 'audio/ogg'
-
-        const mr = new MediaRecorder(stream, { mimeType })
-        audioChunksRef.current = []
-        mr.ondataavailable = (e) => { if (e.data.size > 0) audioChunksRef.current.push(e.data) }
-        mr.onstop = async () => {
-          stream.getTracks().forEach(t => t.stop())
-          setIsRecording(false)
-          setAudioReady('transcribiendo')
-
-          try {
-            const extension = mimeType.includes('mp4') ? 'mp4' : mimeType.includes('ogg') ? 'ogg' : 'webm'
-            const blob = new Blob(audioChunksRef.current, { type: mimeType })
-            const formData = new FormData()
-            formData.append('audio', blob, `audio.${extension}`)
-
-            const res = await fetch('/api/transcribir', {
-              method: 'POST',
-              body: formData
-            })
-            const data = await res.json()
-
-            if (data.texto) {
-              setInputText(prev => prev ? prev + ' ' + data.texto : data.texto)
-              setAudioReady('listo')
-            } else {
-              console.error('Error transcripción:', data.error)
-              setAudioReady('error')
-            }
-          } catch (err) {
-            console.error('Error al enviar audio:', err)
-            setAudioReady('error')
+      recognition.onresult = (event) => {
+        let interim = ''
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const transcript = event.results[i][0].transcript
+          if (event.results[i].isFinal) {
+            finalTranscript += transcript + ' '
+          } else {
+            interim += transcript
           }
         }
-        mr.start(1000)
-        mediaRecorderRef.current = mr
-        setIsRecording(true)
-      } catch {
-        alert('No se pudo acceder al micrófono. Usá el texto por ahora.')
+        setInputText(finalTranscript + interim)
       }
+
+      recognition.onerror = (event) => {
+        console.error('Error reconocimiento:', event.error)
+        setIsRecording(false)
+        setAudioReady('error')
+      }
+
+      recognition.onend = () => {
+        setIsRecording(false)
+        if (finalTranscript.trim()) {
+          setInputText(finalTranscript.trim())
+          setAudioReady('listo')
+        } else {
+          setAudioReady('error')
+        }
+      }
+
+      recognition.start()
+      setIsRecording(true)
+      setAudioReady(null)
     } else {
       mediaRecorderRef.current?.stop()
     }
