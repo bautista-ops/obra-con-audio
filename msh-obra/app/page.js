@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import styles from './page.module.css'
 
 export default function Home() {
@@ -14,8 +14,21 @@ export default function Home() {
   const [audioReady, setAudioReady] = useState(false)
   const [copied, setCopied] = useState(false)
   const [loadingMsg, setLoadingMsg] = useState('Analizando el contenido...')
+  const [proyectos, setProyectos] = useState([])
   const mediaRecorderRef = useRef(null)
   const audioChunksRef = useRef([])
+
+  useEffect(() => {
+    fetch('/api/proyectos')
+      .then(r => r.json())
+      .then(data => {
+        if (data.proyectos) {
+          setProyectos(data.proyectos)
+          console.log(`Proyectos cargados: ${data.proyectos.length}`)
+        }
+      })
+      .catch(e => console.error('Error cargando proyectos:', e))
+  }, [])
 
   const canSubmit = inputText.trim().length > 5 && tipo !== null && (tipo !== 'nc' || resolucion !== null)
 
@@ -93,7 +106,7 @@ export default function Home() {
       const res = await fetch('/api/procesar', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tipo, resolucion, input: inputText })
+        body: JSON.stringify({ tipo, resolucion, input: inputText, proyectos })
       })
       const data = await res.json()
       clearInterval(interval)
