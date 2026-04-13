@@ -8,6 +8,28 @@ const client = new Anthropic({
 
 export const maxDuration = 60
 
+function filtrarProyectosRelevantes(proyectos, input) {
+  if (!proyectos?.length) return []
+  const inputLower = input.toLowerCase()
+  const palabras = inputLower.split(/\s+/).filter(p => p.length > 3)
+
+  const scored = proyectos.map(p => {
+    const nombreLower = (p.nombre || '').toLowerCase()
+    const clienteLower = (p.cliente || '').toLowerCase()
+    let score = 0
+    palabras.forEach(palabra => {
+      if (nombreLower.includes(palabra)) score += 3
+      if (clienteLower.includes(palabra)) score += 2
+    })
+    return { ...p, score }
+  })
+
+  const relevantes = scored.filter(p => p.score > 0).sort((a, b) => b.score - a.score).slice(0, 10)
+  if (relevantes.length > 0) return relevantes
+
+  return proyectos.slice(0, 20)
+}
+
 export async function POST(request) {
   try {
     const { tipo, resolucion, input, proyectos } = await request.json()
@@ -16,8 +38,10 @@ export async function POST(request) {
       return Response.json({ error: 'Faltan campos requeridos' }, { status: 400 })
     }
 
-    const proyectosContext = proyectos?.length
-      ? `\nTenés disponible la siguiente lista de proyectos del CRM de MSH. Cuando el texto mencione un proyecto (por nombre, número o cliente), identificá cuál es y usá su información:\n${JSON.stringify(proyectos.map(p => ({ id: p.id, nombre: p.nombre, cliente: p.cliente, comercial: p.comercial, etapa: p.etapa })), null, 2)}\n`
+    const proyectosFiltrados = filtrarProyectosRelevantes(proyectos, input)
+
+    const proyectosContext = proyectosFiltrados.length
+      ? `\nListado de proyectos del CRM de MSH (los más relevantes según el contexto):\n${proyectosFiltrados.map(p => `- ID: ${p.id} | Nombre: ${p.nombre} | Cliente: ${p.cliente || 'N/A'} | Comercial: ${p.comercial || 'N/A'} | Etapa: ${p.etapa || 'N/A'}`).join('\n')}\n`
       : ''
 
     let systemPrompt
@@ -27,12 +51,11 @@ ${proyectosContext}
 Extraé del texto los datos para una minuta de obra y respondé SOLO con un JSON válido, sin markdown, sin texto extra:
 {
   "tipo": "minuta",
-  "obra": "nombre del proyecto tal como figura en el CRM si lo encontraste, sino el nombre mencionado",
-  "proyecto_id": "id numérico del proyecto en el CRM si lo identificaste, sino null",
-  "cliente": "nombre del cliente si lo identificaste del CRM, sino null",
-  "comercial": "nombre del comercial a cargo si lo identificaste del CRM, sino null",
-  "etapa": "etapa del proyecto en el CRM si lo identificaste, sino null",
-  "fecha": "fecha mencionada o dejar vacío si no se menciona",
+  "obra": "nombre del proyecto tal como figura en el CRM si lo identificaste, sino el nombre mencionado",
+  "proyecto_id": null o número entero con el ID del proyecto si lo identificaste,
+  "cliente": "nombre del cliente si lo identificaste, sino null",
+  "comercial": "nombre del comercial a cargo si lo identificaste, sino null",
+  "fecha": "fecha mencionada o vacío si no se menciona",
   "asistentes": ["lista de personas mencionadas"],
   "temas": ["lista de temas tratados"],
   "acuerdos": ["lista de acuerdos o decisiones tomadas"],
@@ -45,10 +68,10 @@ ${proyectosContext}
 Extraé del texto los datos para una no conformidad y respondé SOLO con un JSON válido, sin markdown, sin texto extra:
 {
   "tipo": "nc",
-  "proyecto": "nombre del proyecto tal como figura en el CRM si lo encontraste, sino el nombre mencionado",
-  "proyecto_id": "id numérico del proyecto en el CRM si lo identificaste, sino null",
-  "cliente": "nombre del cliente si lo identificaste del CRM, sino null",
-  "comercial": "nombre del comercial a cargo si lo identificaste del CRM, sino null",
+  "proyecto": "nombre del proyecto tal como figura en el CRM si lo identificaste, sino el nombre mencionado",
+  "proyecto_id": null o número entero con el ID del proyecto si lo identificaste,
+  "cliente": "nombre del cliente si lo identificaste, sino null",
+  "comercial": "nombre del comercial a cargo si lo identificaste, sino null",
   "producto": "nombre del producto o material afectado",
   "sector": "sector de la obra donde ocurrió",
   "descripcion": "descripción clara y completa del problema",
