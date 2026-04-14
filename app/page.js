@@ -274,8 +274,16 @@ export default function Home() {
                 <span className={styles.badgeMinuta}>Minuta de obra</span>
                 <div className={styles.resultRow}>
                   <span className={styles.resultLabel}>Obra</span>
-                  <span className={styles.resultValue}>{result.obra || '—'}</span>
+                  <span className={styles.resultValue}>
+                    {result.proyecto_id ? `#${result.proyecto_id} — ` : ''}{result.obra || '—'}
+                  </span>
                 </div>
+                {result.comercial && (
+                  <div className={styles.resultRow}>
+                    <span className={styles.resultLabel}>Comercial</span>
+                    <span className={styles.resultValue}>{result.comercial}</span>
+                  </div>
+                )}
                 <div className={styles.resultRow}>
                   <span className={styles.resultLabel}>Fecha</span>
                   <span className={styles.resultValue}>{result.fecha || '—'}</span>
@@ -300,8 +308,16 @@ export default function Home() {
                 <span className={styles.badgeNC}>No conformidad</span>
                 <div className={styles.resultRow}>
                   <span className={styles.resultLabel}>Proyecto</span>
-                  <span className={styles.resultValue}>{result.proyecto || '—'}</span>
+                  <span className={styles.resultValue}>
+                    {result.proyecto_id ? `#${result.proyecto_id} — ` : ''}{result.proyecto || '—'}
+                  </span>
                 </div>
+                {result.comercial && (
+                  <div className={styles.resultRow}>
+                    <span className={styles.resultLabel}>Comercial</span>
+                    <span className={styles.resultValue}>{result.comercial}</span>
+                  </div>
+                )}
                 <div className={styles.resultRow}>
                   <span className={styles.resultLabel}>Producto</span>
                   <span className={styles.resultValue}>{result.producto || '—'}</span>
@@ -327,8 +343,8 @@ export default function Home() {
               <>
                 <div className={styles.recipients}>
                   {result.tipo === 'minuta'
-                    ? <>Destinatarios: <strong>Estudio del cliente · Enrique Suárez · Comercial a cargo</strong></>
-                    : <>Notificar a: <strong>Responsable de operaciones · Jefe de planta</strong></>
+                    ? <>Destinatarios: <strong>Estudio del cliente · Enrique Suárez{result.comercial ? ` · ${result.comercial}` : ' · Comercial a cargo'}</strong></>
+                    : <>Notificar a: <strong>Responsable de operaciones · Jefe de planta{result.comercial ? ` · ${result.comercial}` : ''}</strong></>
                   }
                 </div>
                 <button className={styles.copyBtn} onClick={copyText}>
