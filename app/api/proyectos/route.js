@@ -13,7 +13,7 @@ export async function GET() {
 <methodCall>
   <methodName>authenticate</methodName>
   <params>
-    <param><value><string>grupomsh</string></value></param>
+    <param><value><string>grupomsh-main-16859458</string></value></param>
     <param><value><string>${user}</string></value></param>
     <param><value><string>${apiKey}</string></value></param>
     <param><value><struct></struct></value></param>
@@ -36,7 +36,7 @@ export async function GET() {
 <methodCall>
   <methodName>execute_kw</methodName>
   <params>
-    <param><value><string>grupomsh</string></value></param>
+    <param><value><string>grupomsh-main-16859458</string></value></param>
     <param><value><int>${uid}</int></value></param>
     <param><value><string>${apiKey}</string></value></param>
     <param><value><string>crm.lead</string></value></param>
