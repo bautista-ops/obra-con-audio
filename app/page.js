@@ -15,6 +15,7 @@ export default function Home() {
   const [copied, setCopied] = useState(false)
   const [loadingMsg, setLoadingMsg] = useState('Analizando el contenido...')
   const [proyectos, setProyectos] = useState([])
+  const [proyectoSeleccionado, setProyectoSeleccionado] = useState(null)
   const mediaRecorderRef = useRef(null)
   const audioChunksRef = useRef([])
 
@@ -106,7 +107,7 @@ export default function Home() {
       const res = await fetch('/api/procesar', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tipo, resolucion, input: inputText, proyectos })
+        body: JSON.stringify({ tipo, resolucion, input: inputText, proyectos, proyectoForzado: proyectoSeleccionado })
       })
       const data = await res.json()
       clearInterval(interval)
@@ -150,6 +151,7 @@ export default function Home() {
     setError(null)
     setAudioReady(false)
     setCopied(false)
+    setProyectoSeleccionado(null)
   }
 
   return (
@@ -206,6 +208,27 @@ export default function Home() {
                     <span className={styles.resolveSub}>Vuelve a planta</span>
                   </button>
                 </div>
+              </div>
+            )}
+
+            {proyectos.length > 0 && (
+              <div className={styles.card}>
+                <p className={styles.sectionLabel}>Proyecto</p>
+                <select
+                  className={styles.select}
+                  value={proyectoSeleccionado?.id || ''}
+                  onChange={(e) => {
+                    const p = proyectos.find(p => p.id === parseInt(e.target.value))
+                    setProyectoSeleccionado(p || null)
+                  }}
+                >
+                  <option value="">— Se detecta automáticamente por audio —</option>
+                  {proyectos.map(p => (
+                    <option key={p.id} value={p.id}>
+                      {p.nombre}{p.comercial ? ` · ${p.comercial}` : ''}
+                    </option>
+                  ))}
+                </select>
               </div>
             )}
 

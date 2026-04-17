@@ -32,18 +32,22 @@ function filtrarProyectosRelevantes(proyectos, input) {
 
 export async function POST(request) {
   try {
-    const { tipo, resolucion, input, proyectos } = await request.json()
+    const { tipo, resolucion, input, proyectos, proyectoForzado } = await request.json()
 
     if (!input || !tipo) {
       return Response.json({ error: 'Faltan campos requeridos' }, { status: 400 })
     }
 
-    const proyectosFiltrados = filtrarProyectosRelevantes(proyectos, input)
-
-    const proyectosContext = proyectosFiltrados.length
-      ? `\nListado de proyectos del CRM de MSH (los más relevantes según el contexto):\n${proyectosFiltrados.map(p => `- ID: ${p.id} | Nombre: ${p.nombre} | Cliente: ${p.cliente || 'N/A'} | Comercial: ${p.comercial || 'N/A'} | Etapa: ${p.etapa || 'N/A'}`).join('\n')}\n`
-      : ''
-
+    // If user selected a project manually, use it directly
+    let proyectosContext = ''
+    if (proyectoForzado) {
+      proyectosContext = `\nEl usuario seleccionó manualmente este proyecto del CRM — usalo como el proyecto del documento:\n- ID: ${proyectoForzado.id} | Nombre: ${proyectoForzado.nombre} | Cliente: ${proyectoForzado.cliente || 'N/A'} | Comercial: ${proyectoForzado.comercial || 'N/A'} | Etapa: ${proyectoForzado.etapa || 'N/A'}\n`
+    } else {
+      const proyectosFiltrados = filtrarProyectosRelevantes(proyectos, input)
+      proyectosContext = proyectosFiltrados.length
+        ? `\nListado de proyectos del CRM de MSH (los más relevantes según el contexto):\n${proyectosFiltrados.map(p => `- ID: ${p.id} | Nombre: ${p.nombre} | Cliente: ${p.cliente || 'N/A'} | Comercial: ${p.comercial || 'N/A'} | Etapa: ${p.etapa || 'N/A'}`).join('\n')}\n`
+        : ''
+    }
     let systemPrompt
     if (tipo === 'minuta') {
       systemPrompt = `Sos un asistente de obra para Grupo MSH, empresa metalúrgica argentina especializada en soluciones arquitectónicas metálicas (fachadas, revestimientos, cielorrasos, parasoles).
