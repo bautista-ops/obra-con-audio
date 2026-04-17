@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
+import Image from 'next/image'
 import styles from './page.module.css'
 
 export default function Home() {
@@ -162,7 +163,9 @@ export default function Home() {
     <main className={styles.main}>
       <div className={styles.container}>
         <div className={styles.header}>
-          <div className={styles.logo}>MSH</div>
+          <div className={styles.logoWrapper}>
+            <Image src="/logo.png" alt="MSH" width={64} height={32} style={{ objectFit: 'contain', filter: 'invert(1)' }} />
+          </div>
           <div>
             <h1 className={styles.title}>Asistente de obra</h1>
             <p className={styles.subtitle}>Minutas y no conformidades</p>
