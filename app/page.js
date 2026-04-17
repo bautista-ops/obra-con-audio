@@ -16,6 +16,8 @@ export default function Home() {
   const [loadingMsg, setLoadingMsg] = useState('Analizando el contenido...')
   const [proyectos, setProyectos] = useState([])
   const [proyectoSeleccionado, setProyectoSeleccionado] = useState(null)
+  const [busqueda, setBusqueda] = useState('')
+  const [mostrarResultados, setMostrarResultados] = useState(false)
   const mediaRecorderRef = useRef(null)
   const audioChunksRef = useRef([])
 
@@ -152,6 +154,8 @@ export default function Home() {
     setAudioReady(false)
     setCopied(false)
     setProyectoSeleccionado(null)
+    setBusqueda('')
+    setMostrarResultados(false)
   }
 
   return (
@@ -214,21 +218,63 @@ export default function Home() {
             {proyectos.length > 0 && (
               <div className={styles.card}>
                 <p className={styles.sectionLabel}>Proyecto</p>
-                <select
-                  className={styles.select}
-                  value={proyectoSeleccionado?.id || ''}
-                  onChange={(e) => {
-                    const p = proyectos.find(p => p.id === parseInt(e.target.value))
-                    setProyectoSeleccionado(p || null)
-                  }}
-                >
-                  <option value="">— Se detecta automáticamente por audio —</option>
-                  {proyectos.map(p => (
-                    <option key={p.id} value={p.id}>
-                      {p.nombre}{p.comercial ? ` · ${p.comercial}` : ''}
-                    </option>
-                  ))}
-                </select>
+                {proyectoSeleccionado ? (
+                  <div className={styles.proyectoSelected}>
+                    <div className={styles.proyectoSelectedInfo}>
+                      <span className={styles.proyectoSelectedNombre}>{proyectoSeleccionado.nombre}</span>
+                      {proyectoSeleccionado.comercial && (
+                        <span className={styles.proyectoSelectedComercial}>{proyectoSeleccionado.comercial}</span>
+                      )}
+                    </div>
+                    <button
+                      className={styles.proyectoSelectedClear}
+                      onClick={() => { setProyectoSeleccionado(null); setBusqueda(''); }}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ) : (
+                  <div className={styles.searchWrapper}>
+                    <input
+                      type="text"
+                      className={styles.searchInput}
+                      placeholder="Buscá por nombre, cliente o comercial..."
+                      value={busqueda}
+                      onChange={(e) => { setBusqueda(e.target.value); setMostrarResultados(true); }}
+                      onFocus={() => setMostrarResultados(true)}
+                      onBlur={() => setTimeout(() => setMostrarResultados(false), 150)}
+                    />
+                    {!busqueda && (
+                      <p className={styles.searchHint}>O dejá vacío para detección automática por audio</p>
+                    )}
+                    {mostrarResultados && busqueda.length >= 2 && (() => {
+                      const q = busqueda.toLowerCase()
+                      const resultados = proyectos.filter(p =>
+                        p.nombre?.toLowerCase().includes(q) ||
+                        p.cliente?.toLowerCase().includes(q) ||
+                        p.comercial?.toLowerCase().includes(q)
+                      ).slice(0, 8)
+                      return resultados.length > 0 ? (
+                        <div className={styles.searchResults}>
+                          {resultados.map(p => (
+                            <button
+                              key={p.id}
+                              className={styles.searchResultItem}
+                              onMouseDown={() => { setProyectoSeleccionado(p); setBusqueda(''); setMostrarResultados(false); }}
+                            >
+                              <span className={styles.searchResultNombre}>{p.nombre}</span>
+                              {p.comercial && <span className={styles.searchResultComercial}>{p.comercial}</span>}
+                            </button>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className={styles.searchResults}>
+                          <p className={styles.searchNoResult}>Sin coincidencias</p>
+                        </div>
+                      )
+                    })()}
+                  </div>
+                )}
               </div>
             )}
 
