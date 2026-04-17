@@ -248,12 +248,11 @@ export default function Home() {
                       <p className={styles.searchHint}>O dejá vacío para detección automática por audio</p>
                     )}
                     {mostrarResultados && busqueda.length >= 2 && (() => {
-                      const q = busqueda.toLowerCase()
-                      const resultados = proyectos.filter(p =>
-                        p.nombre?.toLowerCase().includes(q) ||
-                        p.cliente?.toLowerCase().includes(q) ||
-                        p.comercial?.toLowerCase().includes(q)
-                      ).slice(0, 8)
+                      const palabras = busqueda.toLowerCase().split(/\s+/).filter(Boolean)
+                      const resultados = proyectos.filter(p => {
+                        const texto = [p.nombre, p.cliente, p.comercial].join(' ').toLowerCase()
+                        return palabras.every(palabra => texto.includes(palabra))
+                      }).slice(0, 8)
                       return resultados.length > 0 ? (
                         <div className={styles.searchResults}>
                           {resultados.map(p => (
