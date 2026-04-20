@@ -32,7 +32,7 @@ function filtrarProyectosRelevantes(proyectos, input) {
 
 export async function POST(request) {
   try {
-    const { tipo, resolucion, input, proyectos, proyectoForzado } = await request.json()
+    const { tipo, resolucion, input, proyectos, proyectoForzado, fechaMinuta, asistentesMinuta } = await request.json()
 
     if (!input || !tipo) {
       return Response.json({ error: 'Faltan campos requeridos' }, { status: 400 })
@@ -50,8 +50,10 @@ export async function POST(request) {
     }
     let systemPrompt
     if (tipo === 'minuta') {
+      const fechaCtx = fechaMinuta ? `\nFecha de la reunión (ya definida por el usuario, usala tal cual): ${fechaMinuta}` : ""
+      const asistentesCtx = asistentesMinuta?.length ? `\nAsistentes ya confirmados por el usuario (incluilos en el JSON): ${asistentesMinuta.join(", ")}` : ""
       systemPrompt = `Sos un asistente de obra para Grupo MSH, empresa metalúrgica argentina especializada en soluciones arquitectónicas metálicas (fachadas, revestimientos, cielorrasos, parasoles).
-${proyectosContext}
+${proyectosContext}${fechaCtx}${asistentesCtx}
 Extraé del texto los datos para una minuta de obra y respondé SOLO con un JSON válido, sin markdown, sin texto extra:
 {
   "tipo": "minuta",

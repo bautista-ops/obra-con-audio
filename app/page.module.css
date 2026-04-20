@@ -22,12 +22,9 @@
 .logoWrapper {
   width: 72px;
   height: 36px;
-  background: #1a1a1a;
-  border-radius: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 6px 8px;
   flex-shrink: 0;
 }
 
@@ -584,4 +581,53 @@
 .select:focus {
   outline: none;
   border-color: #1a1a1a;
+}
+
+.dateInput {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #e8e6e2;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #1a1a1a;
+  background: #fff;
+  font-family: inherit;
+}
+
+.dateInput:focus {
+  outline: none;
+  border-color: #1a1a1a;
+}
+
+.asistentesList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.asistenteTag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #1a1a1a;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 4px 10px;
+  border-radius: 20px;
+}
+
+.asistenteTag button {
+  background: transparent;
+  border: none;
+  color: #aaa;
+  font-size: 11px;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+}
+
+.asistenteTag button:hover {
+  color: #fff;
 }

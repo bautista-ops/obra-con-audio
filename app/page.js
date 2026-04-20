@@ -19,19 +19,24 @@ export default function Home() {
   const [proyectoSeleccionado, setProyectoSeleccionado] = useState(null)
   const [busqueda, setBusqueda] = useState('')
   const [mostrarResultados, setMostrarResultados] = useState(false)
+  const [empleados, setEmpleados] = useState([])
+  const [asistentes, setAsistentes] = useState([])
+  const [busquedaAsistente, setBusquedaAsistente] = useState('')
+  const [mostrarAsistentes, setMostrarAsistentes] = useState(false)
+  const [fechaMinuta, setFechaMinuta] = useState(() => new Date().toISOString().split('T')[0])
   const mediaRecorderRef = useRef(null)
   const audioChunksRef = useRef([])
 
   useEffect(() => {
     fetch('/api/proyectos')
       .then(r => r.json())
-      .then(data => {
-        if (data.proyectos) {
-          setProyectos(data.proyectos)
-          console.log(`Proyectos cargados: ${data.proyectos.length}`)
-        }
-      })
+      .then(data => { if (data.proyectos) setProyectos(data.proyectos) })
       .catch(e => console.error('Error cargando proyectos:', e))
+
+    fetch('/api/empleados')
+      .then(r => r.json())
+      .then(data => { if (data.empleados) setEmpleados(data.empleados) })
+      .catch(e => console.error('Error cargando empleados:', e))
   }, [])
 
   const canSubmit = inputText.trim().length > 5 && tipo !== null && (tipo !== 'nc' || resolucion !== null)
@@ -110,7 +115,7 @@ export default function Home() {
       const res = await fetch('/api/procesar', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tipo, resolucion, input: inputText, proyectos, proyectoForzado: proyectoSeleccionado })
+        body: JSON.stringify({ tipo, resolucion, input: inputText, proyectos, proyectoForzado: proyectoSeleccionado, fechaMinuta: tipo === 'minuta' ? fechaMinuta : null, asistentesMinuta: tipo === 'minuta' ? asistentes : [] })
       })
       const data = await res.json()
       clearInterval(interval)
@@ -157,6 +162,10 @@ export default function Home() {
     setProyectoSeleccionado(null)
     setBusqueda('')
     setMostrarResultados(false)
+    setAsistentes([])
+    setBusquedaAsistente('')
+    setMostrarAsistentes(false)
+    setFechaMinuta(new Date().toISOString().split('T')[0])
   }
 
   return (
@@ -164,7 +173,7 @@ export default function Home() {
       <div className={styles.container}>
         <div className={styles.header}>
           <div className={styles.logoWrapper}>
-            <Image src="/logo.png" alt="MSH" width={64} height={32} style={{ objectFit: 'contain', filter: 'invert(1)' }} />
+            <Image src="/logo.png" alt="MSH" width={72} height={36} style={{ objectFit: 'contain' }} />
           </div>
           <div>
             <h1 className={styles.title}>Asistente de obra</h1>
@@ -277,6 +286,95 @@ export default function Home() {
                     })()}
                   </div>
                 )}
+              </div>
+            )}
+
+            {tipo === 'minuta' && (
+              <div className={styles.card}>
+                <p className={styles.sectionLabel}>Fecha de la reunión</p>
+                <input
+                  type="date"
+                  className={styles.dateInput}
+                  value={fechaMinuta}
+                  onChange={(e) => setFechaMinuta(e.target.value)}
+                />
+              </div>
+            )}
+
+            {tipo === 'minuta' && (
+              <div className={styles.card}>
+                <p className={styles.sectionLabel}>Asistentes</p>
+                {asistentes.length > 0 && (
+                  <div className={styles.asistentesList}>
+                    {asistentes.map((a, i) => (
+                      <span key={i} className={styles.asistenteTag}>
+                        {a}
+                        <button onClick={() => setAsistentes(prev => prev.filter((_, idx) => idx !== i))}>✕</button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+                <div className={styles.searchWrapper}>
+                  <input
+                    type="text"
+                    className={styles.searchInput}
+                    placeholder="Agregá asistentes de MSH o externos..."
+                    value={busquedaAsistente}
+                    onChange={(e) => { setBusquedaAsistente(e.target.value); setMostrarAsistentes(true); }}
+                    onFocus={() => setMostrarAsistentes(true)}
+                    onBlur={() => setTimeout(() => setMostrarAsistentes(false), 150)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && busquedaAsistente.trim()) {
+                        if (!asistentes.includes(busquedaAsistente.trim())) {
+                          setAsistentes(prev => [...prev, busquedaAsistente.trim()])
+                        }
+                        setBusquedaAsistente('')
+                        setMostrarAsistentes(false)
+                      }
+                    }}
+                  />
+                  {mostrarAsistentes && busquedaAsistente.length >= 2 && (() => {
+                    const q = busquedaAsistente.toLowerCase()
+                    const sugeridos = empleados
+                      .filter(e => e.nombre.toLowerCase().includes(q) && !asistentes.includes(e.nombre))
+                      .slice(0, 6)
+                    return (
+                      <div className={styles.searchResults}>
+                        {sugeridos.map(e => (
+                          <button
+                            key={e.id}
+                            className={styles.searchResultItem}
+                            onMouseDown={() => {
+                              if (!asistentes.includes(e.nombre)) {
+                                setAsistentes(prev => [...prev, e.nombre])
+                              }
+                              setBusquedaAsistente('')
+                              setMostrarAsistentes(false)
+                            }}
+                          >
+                            <span className={styles.searchResultNombre}>{e.nombre}</span>
+                            {e.cargo && <span className={styles.searchResultComercial}>{e.cargo}</span>}
+                          </button>
+                        ))}
+                        {busquedaAsistente.trim() && !empleados.some(e => e.nombre.toLowerCase() === busquedaAsistente.toLowerCase()) && (
+                          <button
+                            className={styles.searchResultItem}
+                            onMouseDown={() => {
+                              if (!asistentes.includes(busquedaAsistente.trim())) {
+                                setAsistentes(prev => [...prev, busquedaAsistente.trim()])
+                              }
+                              setBusquedaAsistente('')
+                              setMostrarAsistentes(false)
+                            }}
+                          >
+                            <span className={styles.searchResultNombre}>Agregar "{busquedaAsistente.trim()}"</span>
+                            <span className={styles.searchResultComercial}>Externo</span>
+                          </button>
+                        )}
+                      </div>
+                    )
+                  })()}
+                </div>
               </div>
             )}
 
