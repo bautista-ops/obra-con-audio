@@ -1,125 +1,232 @@
+export const maxDuration = 30
+
 import Anthropic from '@anthropic-ai/sdk'
+import { SYSTEM_PROMPT } from '../../../lib/systemPrompt'
 
-const client = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-  maxRetries: 3,
-  timeout: 60000,
-})
+const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
-export const maxDuration = 60
+const DB = 'grupomsh-main-16859458'
 
-function filtrarProyectosRelevantes(proyectos, input) {
-  if (!proyectos?.length) return []
-  const inputLower = input.toLowerCase()
-  const palabras = inputLower.split(/\s+/).filter(p => p.length > 3)
+async function odooAuth() {
+  const url = process.env.ODOO_URL
+  const user = process.env.ODOO_USER
+  const apiKey = process.env.ODOO_API_KEY
+  const res = await fetch(`${url}/xmlrpc/2/common`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/xml' },
+    body: `<?xml version="1.0"?>
+<methodCall>
+  <methodName>authenticate</methodName>
+  <params>
+    <param><value><string>${DB}</string></value></param>
+    <param><value><string>${user}</string></value></param>
+    <param><value><string>${apiKey}</string></value></param>
+    <param><value><struct></struct></value></param>
+  </params>
+</methodCall>`
+  })
+  const text = await res.text()
+  const match = text.match(/<int>(\d+)<\/int>/)
+  return match ? parseInt(match[1]) : null
+}
 
-  const scored = proyectos.map(p => {
-    const nombreLower = (p.nombre || '').toLowerCase()
-    const clienteLower = (p.cliente || '').toLowerCase()
-    let score = 0
-    palabras.forEach(palabra => {
-      if (nombreLower.includes(palabra)) score += 3
-      if (clienteLower.includes(palabra)) score += 2
-    })
-    return { ...p, score }
+async function odooSearchRead(uid, model, filters, fields, limit = 200) {
+  const url = process.env.ODOO_URL
+  const apiKey = process.env.ODOO_API_KEY
+
+  const filtersXml = filters.length === 0
+    ? `<value><array><data></data></array></value>`
+    : `<value><array><data><value><array><data>
+        ${filters.map(([f, op, v]) => `<value><array><data>
+          <value><string>${f}</string></value>
+          <value><string>${op}</string></value>
+          <value><string>${v}</string></value>
+        </data></array></value>`).join('')}
+      </data></array></value></data></array></value>`
+
+  const fieldsXml = fields.map(f => `<value><string>${f}</string></value>`).join('')
+
+  const res = await fetch(`${url}/xmlrpc/2/object`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/xml' },
+    body: `<?xml version="1.0"?>
+<methodCall>
+  <methodName>execute_kw</methodName>
+  <params>
+    <param><value><string>${DB}</string></value></param>
+    <param><value><int>${uid}</int></value></param>
+    <param><value><string>${apiKey}</string></value></param>
+    <param><value><string>${model}</string></value></param>
+    <param><value><string>search_read</string></value></param>
+    <param>${filtersXml}</param>
+    <param><value><struct>
+      <member><n>fields</n><value><array><data>${fieldsXml}</data></array></value></member>
+      <member><n>limit</n><value><int>${limit}</int></value></member>
+    </struct></value></param>
+  </params>
+</methodCall>`
   })
 
-  const relevantes = scored.filter(p => p.score > 0).sort((a, b) => b.score - a.score).slice(0, 10)
-  if (relevantes.length > 0) return relevantes
+  const xml = await res.text()
 
-  return proyectos.slice(0, 20)
+  // Parsear registros
+  const records = []
+  const blockRe = /<value>\s*<struct>([\s\S]*?)<\/struct>\s*<\/value>/g
+  let block
+  while ((block = blockRe.exec(xml)) !== null) {
+    const obj = {}
+    const memberRe = /<member>([\s\S]*?)<\/member>/g
+    let m
+    while ((m = memberRe.exec(block[1])) !== null) {
+      const nameM = m[1].match(/<n>(.*?)<\/name>/)
+      if (!nameM) continue
+      const key = nameM[1]
+      const intM = m[1].match(/<int>(\d+)<\/int>/)
+      const strM = m[1].match(/<string>([^<]*)<\/string>/)
+      const boolM = m[1].match(/<boolean>([01])<\/boolean>/)
+      if (intM) obj[key] = parseInt(intM[1])
+      else if (strM) obj[key] = strM[1]
+      else if (boolM) obj[key] = boolM[1] === '1'
+      else obj[key] = null
+    }
+    if (Object.keys(obj).length > 0) records.push(obj)
+  }
+  return records
 }
 
 export async function POST(request) {
   try {
-    const { tipo, resolucion, input, proyectos, proyectoForzado, fechaMinuta, asistentesMinuta } = await request.json()
+    const { tipo, resolucion, input, proyectoForzado, fechaMinuta, asistentesMinuta } = await request.json()
 
-    if (!input || !tipo) {
-      return Response.json({ error: 'Faltan campos requeridos' }, { status: 400 })
+    if (!input) {
+      return Response.json({ error: 'Falta el contenido del mensaje' }, { status: 400 })
     }
 
-    // If user selected a project manually, use it directly
-    let proyectosContext = ''
-    if (proyectoForzado) {
-      proyectosContext = `\nEl usuario seleccionó manualmente este proyecto del CRM — usalo como el proyecto del documento:\n- ID: ${proyectoForzado.id} | Nombre: ${proyectoForzado.nombre} | Cliente: ${proyectoForzado.cliente || 'N/A'} | Comercial: ${proyectoForzado.comercial || 'N/A'} | Etapa: ${proyectoForzado.etapa || 'N/A'}\n`
-    } else {
-      const proyectosFiltrados = filtrarProyectosRelevantes(proyectos, input)
-      proyectosContext = proyectosFiltrados.length
-        ? `\nListado de proyectos del CRM de MSH (los más relevantes según el contexto):\n${proyectosFiltrados.map(p => `- ID: ${p.id} | Nombre: ${p.nombre} | Cliente: ${p.cliente || 'N/A'} | Comercial: ${p.comercial || 'N/A'} | Etapa: ${p.etapa || 'N/A'}`).join('\n')}\n`
-        : ''
+    // Traer proyectos del CRM desde ODOO (ya funciona — mismo método que /api/proyectos)
+    let proyectosCtx = []
+    try {
+      const uid = await odooAuth()
+      if (uid) {
+        const leads = await odooSearchRead(uid, 'crm.lead', [], ['id', 'name', 'partner_id', 'user_id', 'stage_id'], 200)
+        proyectosCtx = leads
+          .filter(r => {
+            const etapa = (r.stage_id || '').toLowerCase()
+            return etapa.includes('won') || etapa.includes('ganado') || etapa.includes('cotiz')
+          })
+          .map(r => ({
+            id: r.id,
+            nombre: r.name || '',
+            cliente: r.partner_id || '',
+            comercial: r.user_id || '',
+            etapa: r.stage_id || '',
+          }))
+      }
+    } catch (e) {
+      console.error('ODOO error (no crítico):', e)
     }
-    let systemPrompt
-    if (tipo === 'minuta') {
-      const fechaCtx = fechaMinuta ? `\nFecha de la reunión (ya definida por el usuario, usala tal cual): ${fechaMinuta}` : ""
-      const asistentesCtx = asistentesMinuta?.length ? `\nAsistentes ya confirmados por el usuario (incluilos en el JSON): ${asistentesMinuta.join(", ")}` : ""
-      systemPrompt = `Sos un asistente de obra para Grupo MSH, empresa metalúrgica argentina especializada en soluciones arquitectónicas metálicas (fachadas, revestimientos, cielorrasos, parasoles).
-${proyectosContext}${fechaCtx}${asistentesCtx}
-Extraé del texto los datos para una minuta de obra y respondé SOLO con un JSON válido, sin markdown, sin texto extra:
+
+    // Construir contexto del request
+    const proyectoInfo = proyectoForzado
+      ? `Proyecto seleccionado por el usuario: ${proyectoForzado.nombre}${proyectoForzado.cliente ? ` | Cliente: ${proyectoForzado.cliente}` : ''}${proyectoForzado.comercial ? ` | Comercial: ${proyectoForzado.comercial}` : ''} | ID ODOO: ${proyectoForzado.id}`
+      : 'Proyecto no seleccionado — inferir del texto'
+
+    const asistentesInfo = asistentesMinuta && asistentesMinuta.length > 0
+      ? `Asistentes confirmados por el usuario: ${asistentesMinuta.join(', ')}`
+      : 'Asistentes no seleccionados — extraer del texto'
+
+    const fechaInfo = fechaMinuta
+      ? `Fecha de la reunión: ${fechaMinuta}`
+      : `Fecha de hoy: ${new Date().toISOString().split('T')[0]}`
+
+    const resolucionInfo = tipo === 'nc' && resolucion
+      ? `Resolución indicada: ${resolucion === 'refab' ? 'Requiere refabricación (vuelve a planta)' : 'Se resuelve en obra (solución in situ)'}`
+      : ''
+
+    const proyectosLista = proyectosCtx.length > 0
+      ? `\nProyectos activos en ODOO CRM:\n${proyectosCtx.map(p => `- [ID:${p.id}] ${p.nombre}${p.cliente ? ` | ${p.cliente}` : ''}${p.comercial ? ` | Comercial: ${p.comercial}` : ''}`).join('\n')}`
+      : ''
+
+    // System prompt + instrucción JSON según tipo
+    const jsonInstruccion = tipo === 'minuta' ? `
+Respondé ÚNICAMENTE con un JSON válido, sin texto adicional ni backticks. Estructura exacta:
 {
   "tipo": "minuta",
-  "obra": "nombre del proyecto tal como figura en el CRM si lo identificaste, sino el nombre mencionado",
-  "proyecto_id": null o número entero con el ID del proyecto si lo identificaste,
-  "cliente": "nombre del cliente si lo identificaste, sino null",
-  "comercial": "nombre del comercial a cargo si lo identificaste, sino null",
-  "fecha": "fecha mencionada o vacío si no se menciona",
-  "asistentes": ["lista de personas mencionadas"],
-  "temas": ["lista de temas tratados"],
-  "acuerdos": ["lista de acuerdos o decisiones tomadas"],
-  "pendientes": ["lista de puntos pendientes, incluir responsable si se menciona"],
-  "asunto_email": "asunto sugerido para el correo"
-}`
-    } else {
-      systemPrompt = `Sos un asistente de obra para Grupo MSH, empresa metalúrgica argentina especializada en soluciones arquitectónicas metálicas.
-${proyectosContext}
-Extraé del texto los datos para una no conformidad y respondé SOLO con un JSON válido, sin markdown, sin texto extra:
+  "obra": "nombre de la obra",
+  "proyecto_id": null,
+  "comercial": "nombre del comercial o null",
+  "fecha": "DD/MM/AAAA",
+  "lugar": "En obra / En planta / Videollamada",
+  "asistentes": ["Nombre Apellido — Empresa/Rol"],
+  "asunto_email": "Minuta de obra — [Nombre obra] — [Fecha]",
+  "temas": ["descripción del tema 1", "descripción del tema 2"],
+  "acuerdos": ["acuerdo con responsable y fecha si se menciona"],
+  "pendientes": ["pendiente con responsable si se menciona"],
+  "proxima_visita": "fecha o 'A definir'"
+}
+` : `
+Respondé ÚNICAMENTE con un JSON válido, sin texto adicional ni backticks. Estructura exacta:
 {
   "tipo": "nc",
-  "proyecto": "nombre del proyecto tal como figura en el CRM si lo identificaste, sino el nombre mencionado",
-  "proyecto_id": null o número entero con el ID del proyecto si lo identificaste,
-  "cliente": "nombre del cliente si lo identificaste, sino null",
-  "comercial": "nombre del comercial a cargo si lo identificaste, sino null",
-  "producto": "nombre del producto o material afectado",
-  "sector": "sector de la obra donde ocurrió",
-  "descripcion": "descripción clara y completa del problema",
-  "resolucion": "${resolucion === 'refab' ? 'Requiere refabricación' : 'Se resuelve en obra'}"
-}`
+  "proyecto": "nombre del proyecto",
+  "proyecto_id": null,
+  "comercial": "nombre del comercial o null",
+  "producto": "sistema MSH afectado (Horizon Lineal, MSP, Linear Slat, etc.)",
+  "terminacion": "pintura / anodizado / galvanizado / crudo / etc.",
+  "sector": "área donde se originó (Producción / Instalaciones / OT / Logística / etc.)",
+  "descripcion": "descripción detallada del problema",
+  "piezas_cantidad": "cantidad y tipo de piezas afectadas",
+  "causa": "causa según historial MSH",
+  "resolucion": "${resolucion === 'refab' ? 'Requiere refabricación' : 'Se resuelve en obra'}",
+  "contramedidas": ["contramedida 1 basada en historial MSH", "contramedida 2"],
+  "precedente": "caso similar en historial MSH o null",
+  "reincidencia": false,
+  "costo_estimado": "estimación o 'A calcular'",
+  "clasificacion": "GRAVE o MENOR"
+}
+`
+
+    const systemFinal = SYSTEM_PROMPT + '\n\n' + jsonInstruccion
+
+    const userMsg = `
+TIPO: ${tipo?.toUpperCase() || 'DETECTAR AUTOMÁTICAMENTE'}
+${resolucionInfo}
+${proyectoInfo}
+${asistentesInfo}
+${fechaInfo}
+${proyectosLista}
+
+RELATO DEL USUARIO:
+${input}
+`
+
+    const response = await client.messages.create({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 2000,
+      system: systemFinal,
+      messages: [{ role: 'user', content: userMsg }]
+    })
+
+    const raw = response.content[0].text.trim()
+
+    // Parsear JSON — limpiar posibles backticks
+    let parsed
+    try {
+      const clean = raw.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```\s*$/i, '').trim()
+      parsed = JSON.parse(clean)
+    } catch (e) {
+      console.error('Error parseando JSON de Claude:', raw)
+      return Response.json({ error: 'Error al estructurar el documento. Intentá de nuevo.' }, { status: 500 })
     }
 
-    let lastError
-    for (let attempt = 1; attempt <= 3; attempt++) {
-      try {
-        const message = await client.messages.create({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 1000,
-          system: systemPrompt,
-          messages: [{ role: 'user', content: input }]
-        })
-
-        const raw = message.content[0].text.replace(/```json|```/g, '').trim()
-        const parsed = JSON.parse(raw)
-        return Response.json(parsed)
-
-      } catch (err) {
-        lastError = err
-        const isOverloaded = err?.status === 529 || err?.message?.includes('overloaded')
-        if (isOverloaded && attempt < 3) {
-          console.log(`Intento ${attempt} fallido por sobrecarga, reintentando en ${attempt * 2}s...`)
-          await new Promise(r => setTimeout(r, attempt * 2000))
-          continue
-        }
-        throw err
-      }
+    // Si el proyecto fue forzado, usar el ID de ODOO
+    if (proyectoForzado && parsed.proyecto_id === null) {
+      parsed.proyecto_id = proyectoForzado.id
     }
 
-    throw lastError
+    return Response.json(parsed)
 
   } catch (error) {
-    console.error('Error:', error?.message || error)
-    const isOverloaded = error?.status === 529 || error?.message?.includes('overloaded')
-    return Response.json({
-      error: isOverloaded
-        ? 'El servicio está temporalmente saturado. Esperá unos segundos y volvé a intentar.'
-        : 'Error al procesar el contenido'
-    }, { status: 500 })
+    console.error('Error:', error)
+    return Response.json({ error: 'Error al procesar el documento. Intentá de nuevo.' }, { status: 500 })
   }
 }

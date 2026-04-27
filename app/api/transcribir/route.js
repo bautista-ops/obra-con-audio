@@ -1,15 +1,9 @@
-import OpenAI from 'openai'
-import { toFile } from 'openai'
+import OpenAI, { toFile } from 'openai'
 
 export const maxDuration = 60
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-  timeout: 60000,
-  maxRetries: 2,
-})
-
 export async function POST(request) {
+  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY, timeout: 60000, maxRetries: 2 })
   try {
     const formData = await request.formData()
     const audioFile = formData.get('audio')

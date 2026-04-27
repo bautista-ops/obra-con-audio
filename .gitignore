@@ -1,0 +1,25 @@
+# dependencies
+/node_modules
+/.pnp
+.pnp.js
+
+# next.js
+/.next/
+/out/
+/build
+
+# env files — NUNCA subir
+.env
+.env.local
+.env.*.local
+
+# vercel
+.vercel
+
+# misc
+.DS_Store
+*.pem
+npm-debug.log*
+
+# MSH — archivos internos sensibles
+lib/systemPrompt.js
