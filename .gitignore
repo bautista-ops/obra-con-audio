@@ -21,5 +21,4 @@
 *.pem
 npm-debug.log*
 
-# MSH — archivos internos sensibles
-lib/systemPrompt.js
+
