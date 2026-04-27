@@ -52,7 +52,7 @@ export async function GET() {
         </data></array></value>
       </member>
       <member><name>limit</name>
-        <value><int>5</int></value>
+        <value><int>200</int></value>
       </member>
     </struct></value></param>
   </params>
@@ -61,8 +61,28 @@ export async function GET() {
 
     const xml = await searchRes.text()
 
-    // Devolver XML crudo para ver la estructura real
-    return Response.json({ uid, xml_sample: xml.substring(0, 2000) })
+    // Parsear usando <name> con saltos de línea (formato real de ODOO)
+    const empleados = []
+    const blocks = xml.match(/<struct>[\s\S]*?<\/struct>/g) || []
+
+    for (const block of blocks) {
+      const idM = block.match(/<name>id<\/name>\s*<value><int>(\d+)<\/int>/)
+      const nameM = block.match(/<name>name<\/name>\s*<value><string>([^<]+)<\/string>/)
+      const titleM = block.match(/<name>job_title<\/name>\s*<value><string>([^<]+)<\/string>/)
+
+      if (idM && nameM) {
+        empleados.push({
+          id: parseInt(idM[1]),
+          nombre: nameM[1].trim(),
+          cargo: titleM ? titleM[1].trim() : '',
+        })
+      }
+    }
+
+    // Ordenar por nombre
+    empleados.sort((a, b) => a.nombre.localeCompare(b.nombre))
+
+    return Response.json({ empleados })
 
   } catch (error) {
     return Response.json({ error: error?.message }, { status: 500 })
