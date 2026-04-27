@@ -44,45 +44,25 @@ export async function GET() {
       <value><array><data></data></array></value>
     </data></array></value></param>
     <param><value><struct>
-      <member><n>fields</n>
+      <member><name>fields</name>
         <value><array><data>
           <value><string>id</string></value>
           <value><string>name</string></value>
           <value><string>job_title</string></value>
-          <value><string>department_id</string></value>
         </data></array></value>
       </member>
-      <member><n>limit</n>
-        <value><int>200</int></value>
+      <member><name>limit</name>
+        <value><int>5</int></value>
       </member>
     </struct></value></param>
   </params>
 </methodCall>`
     })
 
-    const searchText = await searchRes.text()
+    const xml = await searchRes.text()
 
-    // Parsear registros
-    const recordMatches = searchText.match(/<value>\s*<struct>([\s\S]*?)<\/struct>\s*<\/value>/g) || []
-    const empleados = []
-
-    for (const block of recordMatches) {
-      const idM = block.match(/<n>id<\/name>\s*<value>\s*<int>(\d+)<\/int>/)
-      const nameM = block.match(/<n>name<\/name>\s*<value>\s*<string>([^<]*)<\/string>/)
-      const titleM = block.match(/<n>job_title<\/name>\s*<value>\s*<string>([^<]*)<\/string>/)
-      const deptM = block.match(/<n>department_id<\/name>[\s\S]*?<string>([^<]+)<\/string>/)
-
-      if (idM && nameM && nameM[1]) {
-        empleados.push({
-          id: parseInt(idM[1]),
-          nombre: nameM[1],
-          cargo: titleM ? titleM[1] : '',
-          departamento: deptM ? deptM[1] : '',
-        })
-      }
-    }
-
-    return Response.json({ empleados })
+    // Devolver XML crudo para ver la estructura real
+    return Response.json({ uid, xml_sample: xml.substring(0, 2000) })
 
   } catch (error) {
     return Response.json({ error: error?.message }, { status: 500 })
