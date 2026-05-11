@@ -531,13 +531,15 @@ export default function Home() {
                   {result.tipo === 'minuta'
                     ? <>
                         Destinatarios: <strong>Enrique Suárez{result.comercial ? ` · ${result.comercial}` : ' · Comercial a cargo'}</strong>
-                        {emailCliente && (
-                          <div style={{ marginTop: 6, fontSize: 12 }}>
-                            <span style={{ opacity: 0.6 }}>Email cliente: </span>
-                            <a href={`mailto:${emailCliente}`} style={{ color: 'var(--acento, #c8a96e)', textDecoration: 'none' }}>{emailCliente}</a>
-                            {contactoNombre && <span style={{ opacity: 0.5 }}> — {contactoNombre}</span>}
-                          </div>
-                        )}
+                        <div style={{ marginTop: 6, fontSize: 12 }}>
+                          <span style={{ opacity: 0.6 }}>Email cliente: </span>
+                          {emailCliente
+                            ? <><a href={`mailto:${emailCliente}`} style={{ color: 'var(--acento, #c8a96e)', textDecoration: 'none' }}>{emailCliente}</a>
+                                {contactoNombre && <span style={{ opacity: 0.5 }}> — {contactoNombre}</span>}
+                              </>
+                            : <span style={{ opacity: 0.4, fontStyle: 'italic' }}>No cargado en ODOO</span>
+                          }
+                        </div>
                       </>
                     : <>Notificar a: <strong>Responsable de operaciones · Jefe de planta{result.comercial ? ` · ${result.comercial}` : ''}</strong></>
                   }
