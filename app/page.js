@@ -24,6 +24,8 @@ export default function Home() {
   const [busquedaAsistente, setBusquedaAsistente] = useState('')
   const [mostrarAsistentes, setMostrarAsistentes] = useState(false)
   const [fechaMinuta, setFechaMinuta] = useState(() => new Date().toISOString().split('T')[0])
+  const [emailCliente, setEmailCliente] = useState('')
+  const [contactoNombre, setContactoNombre] = useState('')
   const mediaRecorderRef = useRef(null)
   const audioChunksRef = useRef([])
 
@@ -38,6 +40,21 @@ export default function Home() {
       .then(data => { if (data.empleados) setEmpleados(data.empleados) })
       .catch(e => console.error('Error cargando empleados:', e))
   }, [])
+
+  const seleccionarProyecto = (p) => {
+    setProyectoSeleccionado(p)
+    setBusqueda(p.nombre)
+    setMostrarResultados(false)
+    setEmailCliente('')
+    setContactoNombre('')
+    fetch(`/api/contacto?proyecto_id=${p.id}`)
+      .then(r => r.json())
+      .then(data => {
+        if (data.email_principal) setEmailCliente(data.email_principal)
+        if (data.contacto_nombre) setContactoNombre(data.contacto_nombre)
+      })
+      .catch(e => console.error('Error cargando contacto:', e))
+  }
 
   const canSubmit = inputText.trim().length > 5 && tipo !== null && (tipo !== 'nc' || resolucion !== null)
 
@@ -271,7 +288,7 @@ export default function Home() {
                             <button
                               key={p.id}
                               className={styles.searchResultItem}
-                              onMouseDown={() => { setProyectoSeleccionado(p); setBusqueda(''); setMostrarResultados(false); }}
+                              onMouseDown={() => seleccionarProyecto(p)}
                             >
                               <span className={styles.searchResultNombre}>{p.nombre}</span>
                               {p.comercial && <span className={styles.searchResultComercial}>{p.comercial}</span>}
@@ -512,7 +529,16 @@ export default function Home() {
               <>
                 <div className={styles.recipients}>
                   {result.tipo === 'minuta'
-                    ? <>Destinatarios: <strong>Estudio del cliente · Enrique Suárez{result.comercial ? ` · ${result.comercial}` : ' · Comercial a cargo'}</strong></>
+                    ? <>
+                        Destinatarios: <strong>Enrique Suárez{result.comercial ? ` · ${result.comercial}` : ' · Comercial a cargo'}</strong>
+                        {emailCliente && (
+                          <div style={{ marginTop: 6, fontSize: 12 }}>
+                            <span style={{ opacity: 0.6 }}>Email cliente: </span>
+                            <a href={`mailto:${emailCliente}`} style={{ color: 'var(--acento, #c8a96e)', textDecoration: 'none' }}>{emailCliente}</a>
+                            {contactoNombre && <span style={{ opacity: 0.5 }}> — {contactoNombre}</span>}
+                          </div>
+                        )}
+                      </>
                     : <>Notificar a: <strong>Responsable de operaciones · Jefe de planta{result.comercial ? ` · ${result.comercial}` : ''}</strong></>
                   }
                 </div>
