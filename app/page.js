@@ -161,6 +161,16 @@ export default function Home() {
     return `NO CONFORMIDAD — ${data.proyecto || ''}\n\nProducto: ${data.producto || '—'}\nSector: ${data.sector || '—'}\nProblema: ${data.descripcion || '—'}\nResolución: ${data.resolucion || '—'}`
   }
 
+  const abrirMail = () => {
+    if (!result) return
+    const asunto = result.tipo === 'minuta'
+      ? (result.asunto_email || `Minuta de obra — ${result.obra || ''}`)
+      : `No Conformidad — ${result.proyecto || 'MSH'}`
+    const cuerpo = result.tipo === 'minuta' ? buildCuerpoMinuta(result) : buildReporteNC(result)
+    const destinatario = emailCliente || ''
+    window.location.href = `mailto:${destinatario}?subject=${encodeURIComponent(asunto)}&body=${encodeURIComponent(cuerpo)}`
+  }
+
   const copyText = () => {
     if (!result) return
     const text = result.tipo === 'minuta' ? buildCuerpoMinuta(result) : buildReporteNC(result)
@@ -544,13 +554,24 @@ export default function Home() {
                     : <>Notificar a: <strong>Responsable de operaciones · Jefe de planta{result.comercial ? ` · ${result.comercial}` : ''}</strong></>
                   }
                 </div>
-                <button className={styles.copyBtn} onClick={copyText}>
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <rect x="9" y="9" width="13" height="13" rx="2"/>
-                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
-                  </svg>
-                  {copied ? 'Copiado ✓' : result.tipo === 'minuta' ? 'Copiar borrador' : 'Copiar reporte'}
-                </button>
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <button className={styles.copyBtn} onClick={copyText} style={{ flex: 1 }}>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <rect x="9" y="9" width="13" height="13" rx="2"/>
+                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                    </svg>
+                    {copied ? 'Copiado ✓' : result.tipo === 'minuta' ? 'Copiar borrador' : 'Copiar reporte'}
+                  </button>
+                  {result.tipo === 'minuta' && (
+                    <button className={styles.copyBtn} onClick={abrirMail} style={{ flex: 1 }}>
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                        <polyline points="22,6 12,13 2,6"/>
+                      </svg>
+                      Abrir en mail
+                    </button>
+                  )}
+                </div>
                 {copied && (
                   <div className={styles.successMsg}>
                     <p>{result.tipo === 'minuta' ? 'Borrador copiado — pegalo en tu mail y revisalo antes de enviar' : 'Reporte copiado — envialo al responsable'}</p>
