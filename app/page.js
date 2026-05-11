@@ -168,7 +168,14 @@ export default function Home() {
       : `No Conformidad — ${result.proyecto || 'MSH'}`
     const cuerpo = result.tipo === 'minuta' ? buildCuerpoMinuta(result) : buildReporteNC(result)
     const destinatario = emailCliente || ''
-    window.location.href = `mailto:${destinatario}?subject=${encodeURIComponent(asunto)}&body=${encodeURIComponent(cuerpo)}`
+    const mailtoUrl = `mailto:${destinatario}?subject=${encodeURIComponent(asunto)}&body=${encodeURIComponent(cuerpo)}`
+    const a = document.createElement('a')
+    a.href = mailtoUrl
+    a.target = '_blank'
+    a.rel = 'noopener noreferrer'
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
   }
 
   const copyText = () => {
