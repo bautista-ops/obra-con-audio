@@ -168,14 +168,8 @@ export default function Home() {
       : `No Conformidad — ${result.proyecto || 'MSH'}`
     const cuerpo = result.tipo === 'minuta' ? buildCuerpoMinuta(result) : buildReporteNC(result)
     const destinatario = emailCliente || ''
-    const mailtoUrl = `mailto:${destinatario}?subject=${encodeURIComponent(asunto)}&body=${encodeURIComponent(cuerpo)}`
-    const a = document.createElement('a')
-    a.href = mailtoUrl
-    a.target = '_blank'
-    a.rel = 'noopener noreferrer'
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
+    const gmailUrl = `https://mail.google.com/mail/?view=cm&to=${encodeURIComponent(destinatario)}&su=${encodeURIComponent(asunto)}&body=${encodeURIComponent(cuerpo)}`
+    window.open(gmailUrl, '_blank')
   }
 
   const copyText = () => {
