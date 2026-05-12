@@ -500,6 +500,11 @@
   background: #f7f6f4;
 }
 
+.searchResultItemActivo {
+  background: #f0ede8;
+  border-left: 3px solid #c8a96e;
+}
+
 .searchResultNombre {
   font-size: 13px;
   font-weight: 600;

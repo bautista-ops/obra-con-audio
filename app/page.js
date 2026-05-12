@@ -27,6 +27,7 @@ export default function Home() {
   const [emailCliente, setEmailCliente] = useState('')
   const [contactoNombre, setContactoNombre] = useState('')
   const [emailComercial, setEmailComercial] = useState('')
+  const [indiceProyecto, setIndiceProyecto] = useState(-1)
   const mediaRecorderRef = useRef(null)
   const audioChunksRef = useRef([])
 
@@ -290,9 +291,30 @@ export default function Home() {
                       className={styles.searchInput}
                       placeholder="Buscá por nombre, cliente o comercial..."
                       value={busqueda}
-                      onChange={(e) => { setBusqueda(e.target.value); setMostrarResultados(true); }}
+                      onChange={(e) => { setBusqueda(e.target.value); setMostrarResultados(true); setIndiceProyecto(-1); }}
                       onFocus={() => setMostrarResultados(true)}
                       onBlur={() => setTimeout(() => setMostrarResultados(false), 150)}
+                      onKeyDown={(e) => {
+                        const palabras = busqueda.toLowerCase().split(/s+/).filter(Boolean)
+                        const resultados = proyectos.filter(p => {
+                          const texto = [p.nombre, p.cliente, p.comercial].join(' ').toLowerCase()
+                          return palabras.every(w => texto.includes(w))
+                        }).slice(0, 8)
+                        if (e.key === 'ArrowDown') {
+                          e.preventDefault()
+                          setIndiceProyecto(i => Math.min(i + 1, resultados.length - 1))
+                        } else if (e.key === 'ArrowUp') {
+                          e.preventDefault()
+                          setIndiceProyecto(i => Math.max(i - 1, 0))
+                        } else if (e.key === 'Enter' && indiceProyecto >= 0 && resultados[indiceProyecto]) {
+                          e.preventDefault()
+                          seleccionarProyecto(resultados[indiceProyecto])
+                          setIndiceProyecto(-1)
+                        } else if (e.key === 'Escape') {
+                          setMostrarResultados(false)
+                          setIndiceProyecto(-1)
+                        }
+                      }}
                     />
                     {!busqueda && (
                       <p className={styles.searchHint}>O dejá vacío para detección automática por audio</p>
@@ -305,10 +327,10 @@ export default function Home() {
                       }).slice(0, 8)
                       return resultados.length > 0 ? (
                         <div className={styles.searchResults}>
-                          {resultados.map(p => (
+                          {resultados.map((p, idx) => (
                             <button
                               key={p.id}
-                              className={styles.searchResultItem}
+                              className={styles.searchResultItem + (idx === indiceProyecto ? ' ' + styles.searchResultItemActivo : '')}
                               onMouseDown={() => seleccionarProyecto(p)}
                             >
                               <span className={styles.searchResultNombre}>{p.nombre}</span>
