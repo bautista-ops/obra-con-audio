@@ -64,6 +64,7 @@ export async function GET(request) {
           <value><string>partner_id</string></value>
           <value><string>email_from</string></value>
           <value><string>contact_name</string></value>
+          <value><string>user_id</string></value>
         </data></array></value>
       </member>
       <member><name>limit</name><value><int>1</int></value></member>
@@ -139,9 +140,53 @@ export async function GET(request) {
       }
     }
 
+    // Buscar email del comercial (user_id) en hr.employee
+    let emailComercial = ''
+    const comercialNameM = leadXml.match(/<name>user_id</name>[sS]*?<string>([^<]+)</string>/)
+    if (comercialNameM) {
+      const comercialNombre = comercialNameM[1].trim()
+      const empRes = await fetch(`${url}/xmlrpc/2/object`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/xml' },
+        body: `<?xml version=1.0?>
+<methodCall>
+  <methodName>execute_kw</methodName>
+  <params>
+    <param><value><string>${db}</string></value></param>
+    <param><value><int>${uid}</int></value></param>
+    <param><value><string>${apiKey}</string></value></param>
+    <param><value><string>hr.employee</string></value></param>
+    <param><value><string>search_read</string></value></param>
+    <param><value><array><data>
+      <value><array><data>
+        <value><array><data>
+          <value><string>name</string></value>
+          <value><string>ilike</string></value>
+          <value><string>${comercialNombre}</string></value>
+        </data></array></value>
+      </data></array></value>
+    </data></array></value></param>
+    <param><value><struct>
+      <member><name>fields</name>
+        <value><array><data>
+          <value><string>name</string></value>
+          <value><string>work_email</string></value>
+        </data></array></value>
+      </member>
+      <member><name>limit</name><value><int>1</int></value></member>
+    </struct></value></param>
+  </params>
+</methodCall>`
+      })
+      const empXml = await empRes.text()
+      const empEmailM = empXml.match(/<name>work_email</name>s*<value><string>([^<]+)</string>/)
+      if (empEmailM) emailComercial = empEmailM[1].trim()
+    }
+
     return Response.json({
       email_principal: emailM ? emailM[1] : '',
       contacto_nombre: contactM ? contactM[1] : (partnerNameM ? partnerNameM[1] : ''),
+      email_comercial: emailComercial,
       contactos: contactosAdicionales,
     })
 

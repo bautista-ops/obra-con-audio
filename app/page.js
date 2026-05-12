@@ -26,6 +26,7 @@ export default function Home() {
   const [fechaMinuta, setFechaMinuta] = useState(() => new Date().toISOString().split('T')[0])
   const [emailCliente, setEmailCliente] = useState('')
   const [contactoNombre, setContactoNombre] = useState('')
+  const [emailComercial, setEmailComercial] = useState('')
   const mediaRecorderRef = useRef(null)
   const audioChunksRef = useRef([])
 
@@ -47,11 +48,13 @@ export default function Home() {
     setMostrarResultados(false)
     setEmailCliente('')
     setContactoNombre('')
+    setEmailComercial('')
     fetch(`/api/contacto?proyecto_id=${p.id}`)
       .then(r => r.json())
       .then(data => {
         if (data.email_principal) setEmailCliente(data.email_principal)
         if (data.contacto_nombre) setContactoNombre(data.contacto_nombre)
+        if (data.email_comercial) setEmailComercial(data.email_comercial)
       })
       .catch(e => console.error('Error cargando contacto:', e))
   }
@@ -167,13 +170,14 @@ export default function Home() {
       ? (result.asunto_email || `Minuta de obra — ${result.obra || ''}`)
       : `No Conformidad — ${result.proyecto || 'MSH'}`
     const cuerpo = result.tipo === 'minuta' ? buildCuerpoMinuta(result) : buildReporteNC(result)
-    const destinatario = emailCliente || ''
+    const ENRIQUE_EMAIL = 'enrique@grupomsh.com.ar'
+    const destinatarios = [emailCliente, emailComercial, ENRIQUE_EMAIL].filter(Boolean).join(',')
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
     if (isIOS) {
-      const mailtoUrl = `mailto:${destinatario}?subject=${encodeURIComponent(asunto)}&body=${encodeURIComponent(cuerpo)}`
+      const mailtoUrl = `mailto:${destinatarios}?subject=${encodeURIComponent(asunto)}&body=${encodeURIComponent(cuerpo)}`
       window.location.href = mailtoUrl
     } else {
-      const gmailUrl = `https://mail.google.com/mail/?view=cm&to=${encodeURIComponent(destinatario)}&su=${encodeURIComponent(asunto)}&body=${encodeURIComponent(cuerpo)}`
+      const gmailUrl = `https://mail.google.com/mail/?view=cm&to=${encodeURIComponent(destinatarios)}&su=${encodeURIComponent(asunto)}&body=${encodeURIComponent(cuerpo)}`
       window.open(gmailUrl, '_blank')
     }
   }

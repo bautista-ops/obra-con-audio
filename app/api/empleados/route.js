@@ -49,6 +49,7 @@ export async function GET() {
           <value><string>id</string></value>
           <value><string>name</string></value>
           <value><string>job_title</string></value>
+          <value><string>work_email</string></value>
         </data></array></value>
       </member>
       <member><name>limit</name>
