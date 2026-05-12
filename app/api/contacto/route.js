@@ -148,7 +148,7 @@ export async function GET(request) {
       const empRes = await fetch(`${url}/xmlrpc/2/object`, {
         method: 'POST',
         headers: { 'Content-Type': 'text/xml' },
-        body: `<?xml version=1.0?>
+        body: `<?xml version="1.0"?>
 <methodCall>
   <methodName>execute_kw</methodName>
   <params>
