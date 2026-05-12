@@ -636,3 +636,50 @@
 .asistenteTag button:hover {
   color: #fff;
 }
+
+/* NC — opciones de defecto y causa */
+.ncOpciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ncOpcionBtn {
+  padding: 8px 14px;
+  background: #f7f6f4;
+  border: 1px solid #e0ddd8;
+  border-radius: 20px;
+  font-size: 13px;
+  color: #444;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.ncOpcionBtn:hover {
+  border-color: #c8a96e;
+  color: #c8a96e;
+}
+
+.ncOpcionActivo {
+  background: #c8a96e;
+  border-color: #c8a96e;
+  color: #fff !important;
+}
+
+.textarea {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #e0ddd8;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  color: #1a1a1a;
+  background: #fff;
+  resize: vertical;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.textarea:focus {
+  border-color: #c8a96e;
+}

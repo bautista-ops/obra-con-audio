@@ -31,6 +31,16 @@ export default function Home() {
   const [guardandoOdoo, setGuardandoOdoo] = useState(false)
   const [guardadoOdoo, setGuardadoOdoo] = useState(false)
   const [indiceAsistente, setIndiceAsistente] = useState(-1)
+  // Estados NC
+  const [lotes, setLotes] = useState([])
+  const [loteSeleccionado, setLoteSeleccionado] = useState(null)
+  const [busquedaLote, setBusquedaLote] = useState('')
+  const [mostrarLotes, setMostrarLotes] = useState(false)
+  const [indiceLote, setIndiceLote] = useState(-1)
+  const [defectoNC, setDefectoNC] = useState('')
+  const [causaNC, setCausaNC] = useState('')
+  const [detectadoPor, setDetectadoPor] = useState('')
+  const [observacionesNC, setObservacionesNC] = useState('')
   const mediaRecorderRef = useRef(null)
   const audioChunksRef = useRef([])
 
@@ -61,9 +71,19 @@ export default function Home() {
         if (data.email_comercial) setEmailComercial(data.email_comercial)
       })
       .catch(e => console.error('Error cargando contacto:', e))
+
+    // Extraer número de proyecto del nombre (ej: "P-06663 6430 - ..." → "6430")
+    const numMatch = p.nombre.match(/\b(\d{4,5})\b/)
+    if (numMatch) {
+      const numProyecto = numMatch[1]
+      fetch(`/api/lotes?proyecto=${numProyecto}`)
+        .then(r => r.json())
+        .then(data => { if (data.lotes) setLotes(data.lotes) })
+        .catch(e => console.error('Error cargando lotes:', e))
+    }
   }
 
-  const canSubmit = inputText.trim().length > 5 && tipo !== null && (tipo !== 'nc' || resolucion !== null)
+  const canSubmit = tipo !== null && (tipo !== 'nc' || resolucion !== null) && (tipo !== 'nc' || (loteSeleccionado && defectoNC && causaNC)) && (tipo !== 'minuta' || inputText.trim().length > 5) && (tipo !== 'nc' || observacionesNC.trim().length > 3)
 
   const selectTipo = (t) => {
     setTipo(t)
@@ -139,7 +159,26 @@ export default function Home() {
       const res = await fetch('/api/procesar', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tipo, resolucion, input: inputText, proyectos, proyectoForzado: proyectoSeleccionado, fechaMinuta: tipo === 'minuta' ? fechaMinuta : null, asistentesMinuta: tipo === 'minuta' ? asistentes : [] })
+        body: JSON.stringify({
+            tipo,
+            resolucion,
+            input: tipo === 'nc'
+              ? 'Pieza: ' + (loteSeleccionado?.nombre || '') + ' | Producto: ' + (loteSeleccionado?.producto || '') + ' | Defecto: ' + defectoNC + ' | Causa: ' + causaNC + ' | Detectado por: ' + detectadoPor + ' | Observaciones: ' + observacionesNC
+              : inputText,
+            proyectos,
+            proyectoForzado: proyectoSeleccionado,
+            fechaMinuta: tipo === 'minuta' ? fechaMinuta : null,
+            asistentesMinuta: tipo === 'minuta' ? asistentes : [],
+            ncData: tipo === 'nc' ? {
+              lote: loteSeleccionado?.nombre,
+              producto: loteSeleccionado?.producto,
+              defecto: defectoNC,
+              causa: causaNC,
+              detectadoPor,
+              observaciones: observacionesNC,
+              resolucion,
+            } : null,
+          })
       })
       const data = await res.json()
       clearInterval(interval)
@@ -339,6 +378,13 @@ export default function Home() {
     setMostrarAsistentes(false)
     setFechaMinuta(new Date().toISOString().split('T')[0])
   setGuardadoOdoo(false)
+  setLotes([])
+  setLoteSeleccionado(null)
+  setBusquedaLote('')
+  setDefectoNC('')
+  setCausaNC('')
+  setDetectadoPor('')
+  setObservacionesNC('')
   }
 
   return (
@@ -493,6 +539,121 @@ export default function Home() {
                   onChange={(e) => setFechaMinuta(e.target.value)}
                 />
               </div>
+            )}
+
+            {tipo === 'nc' && proyectoSeleccionado && (
+              <>
+                {/* Pieza / Lote */}
+                <div className={styles.card}>
+                  <p className={styles.sectionLabel}>Pieza afectada</p>
+                  {loteSeleccionado ? (
+                    <div className={styles.proyectoSelected}>
+                      <div className={styles.proyectoSelectedInfo}>
+                        <span className={styles.proyectoSelectedNombre}>{loteSeleccionado.nombre}</span>
+                        {loteSeleccionado.producto && (
+                          <span className={styles.proyectoSelectedComercial}>{loteSeleccionado.producto}</span>
+                        )}
+                      </div>
+                      <button className={styles.proyectoSelectedClear} onClick={() => { setLoteSeleccionado(null); setBusquedaLote('') }}>✕</button>
+                    </div>
+                  ) : (
+                    <div className={styles.searchWrapper}>
+                      <input
+                        type="text"
+                        className={styles.searchInput}
+                        placeholder="Buscá por nombre de pieza o etapa..."
+                        value={busquedaLote}
+                        onChange={(e) => { setBusquedaLote(e.target.value); setMostrarLotes(true); setIndiceLote(-1) }}
+                        onFocus={() => setMostrarLotes(true)}
+                        onBlur={() => setTimeout(() => { setMostrarLotes(false); setIndiceLote(-1) }, 150)}
+                        onKeyDown={(e) => {
+                          const q = busquedaLote.toLowerCase()
+                          const filtrados = lotes.filter(l => l.nombre.toLowerCase().includes(q) || l.producto.toLowerCase().includes(q)).slice(0, 8)
+                          if (e.key === 'ArrowDown') { e.preventDefault(); setIndiceLote(i => Math.min(i + 1, filtrados.length - 1)) }
+                          else if (e.key === 'ArrowUp') { e.preventDefault(); setIndiceLote(i => Math.max(i - 1, 0)) }
+                          else if (e.key === 'Enter' && indiceLote >= 0 && filtrados[indiceLote]) {
+                            e.preventDefault(); setLoteSeleccionado(filtrados[indiceLote]); setBusquedaLote(''); setMostrarLotes(false); setIndiceLote(-1)
+                          } else if (e.key === 'Escape') { setMostrarLotes(false); setIndiceLote(-1) }
+                        }}
+                      />
+                      {mostrarLotes && busquedaLote.length >= 2 && (() => {
+                        const q = busquedaLote.toLowerCase()
+                        const filtrados = lotes.filter(l => l.nombre.toLowerCase().includes(q) || l.producto.toLowerCase().includes(q)).slice(0, 8)
+                        return filtrados.length > 0 ? (
+                          <div className={styles.searchResults}>
+                            {filtrados.map((l, idx) => (
+                              <button
+                                key={l.id}
+                                className={styles.searchResultItem + (idx === indiceLote ? ' ' + styles.searchResultItemActivo : '')}
+                                onMouseDown={() => { setLoteSeleccionado(l); setBusquedaLote(''); setMostrarLotes(false); setIndiceLote(-1) }}
+                              >
+                                <span className={styles.searchResultNombre}>{l.nombre}</span>
+                                {l.producto && <span className={styles.searchResultComercial}>{l.producto}</span>}
+                              </button>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className={styles.searchResults}>
+                            <p className={styles.searchNoResult}>Sin coincidencias</p>
+                          </div>
+                        )
+                      })()}
+                    </div>
+                  )}
+                </div>
+
+                {/* Defecto */}
+                <div className={styles.card}>
+                  <p className={styles.sectionLabel}>Tipo de defecto</p>
+                  <div className={styles.ncOpciones}>
+                    {['Rayada', 'Golpeada', 'Mal pintada', 'Mal plegada', 'Medida incorrecta', 'Faltante', 'Color incorrecto', 'Otro'].map(d => (
+                      <button
+                        key={d}
+                        className={styles.ncOpcionBtn + (defectoNC === d ? ' ' + styles.ncOpcionActivo : '')}
+                        onClick={() => setDefectoNC(d)}
+                      >{d}</button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Causa */}
+                <div className={styles.card}>
+                  <p className={styles.sectionLabel}>Causa</p>
+                  <div className={styles.ncOpciones}>
+                    {['Planos / Documentación', 'Mano de obra', 'Máquina', 'Proveedor', 'Comunicación', 'Otra'].map(ca => (
+                      <button
+                        key={ca}
+                        className={styles.ncOpcionBtn + (causaNC === ca ? ' ' + styles.ncOpcionActivo : '')}
+                        onClick={() => setCausaNC(ca)}
+                      >{ca}</button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Detectado por */}
+                <div className={styles.card}>
+                  <p className={styles.sectionLabel}>Detectado por</p>
+                  <input
+                    type="text"
+                    className={styles.searchInput}
+                    placeholder="Nombre de quien detectó el problema..."
+                    value={detectadoPor}
+                    onChange={(e) => setDetectadoPor(e.target.value)}
+                  />
+                </div>
+
+                {/* Observaciones */}
+                <div className={styles.card}>
+                  <p className={styles.sectionLabel}>Observaciones</p>
+                  <textarea
+                    className={styles.textarea}
+                    placeholder="Describí el problema con el detalle que puedas..."
+                    value={observacionesNC}
+                    onChange={(e) => setObservacionesNC(e.target.value)}
+                    rows={4}
+                  />
+                </div>
+              </>
             )}
 
             {tipo === 'minuta' && (
