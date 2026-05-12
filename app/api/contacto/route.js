@@ -34,7 +34,7 @@ export async function GET(request) {
     const uid = uidMatch ? parseInt(uidMatch[1]) : null
     if (!uid) return Response.json({ error: 'Auth fallida' }, { status: 401 })
 
-    // Traer datos del lead incluyendo email y partner_id
+    // Traer datos del lead
     const leadRes = await fetch(`${url}/xmlrpc/2/object`, {
       method: 'POST',
       headers: { 'Content-Type': 'text/xml' },
@@ -75,18 +75,17 @@ export async function GET(request) {
 
     const leadXml = await leadRes.text()
 
-    // Extraer email principal y nombre de contacto del lead
     const emailM = leadXml.match(/<name>email_from<\/name>\s*<value><string>([^<]*)<\/string>/)
     const contactM = leadXml.match(/<name>contact_name<\/name>\s*<value><string>([^<]*)<\/string>/)
     const partnerNameM = leadXml.match(/<name>partner_id<\/name>[\s\S]*?<string>([^<]+)<\/string>/)
     const partnerIdM = leadXml.match(/<name>partner_id<\/name>\s*<value><array><data>\s*<value><int>(\d+)<\/int>/)
+    const userNameM = leadXml.match(/<name>user_id<\/name>[\s\S]*?<string>([^<]+)<\/string>/)
 
     let contactosAdicionales = []
 
-    // Si hay partner_id, buscar contactos de esa empresa
+    // Contactos del partner
     if (partnerIdM) {
       const partnerId = parseInt(partnerIdM[1])
-
       const partnerRes = await fetch(`${url}/xmlrpc/2/object`, {
         method: 'POST',
         headers: { 'Content-Type': 'text/xml' },
@@ -122,10 +121,8 @@ export async function GET(request) {
   </params>
 </methodCall>`
       })
-
       const partnerXml = await partnerRes.text()
       const blocks = partnerXml.match(/<struct>[\s\S]*?<\/struct>/g) || []
-
       for (const block of blocks) {
         const nM = block.match(/<name>name<\/name>\s*<value><string>([^<]+)<\/string>/)
         const eM = block.match(/<name>email<\/name>\s*<value><string>([^<]+)<\/string>/)
@@ -140,11 +137,10 @@ export async function GET(request) {
       }
     }
 
-    // Buscar email del comercial (user_id) en hr.employee
+    // Buscar email del comercial en hr.employee
     let emailComercial = ''
-    const comercialNameM = leadXml.match(/<name>user_id</name>[sS]*?<string>([^<]+)</string>/)
-    if (comercialNameM) {
-      const comercialNombre = comercialNameM[1].trim()
+    if (userNameM) {
+      const comercialNombre = userNameM[1].trim()
       const empRes = await fetch(`${url}/xmlrpc/2/object`, {
         method: 'POST',
         headers: { 'Content-Type': 'text/xml' },
@@ -179,7 +175,7 @@ export async function GET(request) {
 </methodCall>`
       })
       const empXml = await empRes.text()
-      const empEmailM = empXml.match(/<name>work_email</name>s*<value><string>([^<]+)</string>/)
+      const empEmailM = empXml.match(/<name>work_email<\/name>\s*<value><string>([^<]+)<\/string>/)
       if (empEmailM) emailComercial = empEmailM[1].trim()
     }
 
