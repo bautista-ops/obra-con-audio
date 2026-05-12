@@ -212,7 +212,10 @@ export default function Home() {
       : `No Conformidad — ${result.proyecto || 'MSH'}`
     const cuerpo = result.tipo === 'minuta' ? buildCuerpoMinuta(result) : buildReporteNC(result)
     const ENRIQUE_EMAIL = 'enrique@grupomsh.com.ar'
-    const destinatarios = [emailCliente, emailComercial, ENRIQUE_EMAIL].filter(Boolean).join(',')
+    const NC_REFAB_EMAILS = ['enrique@grupomsh.com.ar', 'joaquin@grupomsh.com.ar', 'eric@grupomsh.com.ar']
+    const destinatarios = result.tipo === 'nc' && result.resolucion?.includes('refabricación')
+      ? [emailComercial, ...NC_REFAB_EMAILS].filter(Boolean).join(',')
+      : [emailCliente, emailComercial, ENRIQUE_EMAIL].filter(Boolean).join(',')
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
     if (isIOS) {
       const mailtoUrl = `mailto:${destinatarios}?subject=${encodeURIComponent(asunto)}&body=${encodeURIComponent(cuerpo)}`
@@ -767,44 +770,40 @@ export default function Home() {
               </div>
             )}
 
-            <div className={styles.card}>
-              <p className={styles.sectionLabel}>Contá qué pasó</p>
-              <button
-                className={`${styles.audioBtn} ${isRecording ? styles.recording : ''} ${audioReady === 'listo' ? styles.audioReady : ''} ${audioReady === 'transcribiendo' ? styles.audioTranscribiendo : ''} ${audioReady === 'error' ? styles.audioError : ''}`}
-                onClick={toggleRecording}
-                disabled={audioReady === 'transcribiendo'}
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
-                  <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
-                  <line x1="12" y1="19" x2="12" y2="23"/>
-                  <line x1="8" y1="23" x2="16" y2="23"/>
-                </svg>
-                {isRecording
-                  ? 'Grabando... tocá para detener'
-                  : audioReady === 'transcribiendo'
-                  ? 'Transcribiendo...'
-                  : audioReady === 'listo'
-                  ? 'Audio transcripto ✓ — grabá otro si querés'
-                  : audioReady === 'error'
-                  ? 'Error al transcribir — intentá de nuevo'
-                  : 'Grabar audio'}
-              </button>
-              <div className={styles.divider}>o escribí directamente</div>
-              <textarea
-                className={styles.textarea}
-                value={inputText}
-                onChange={(e) => setInputText(e.target.value)}
-                placeholder={
-                  tipo === 'nc'
-                    ? 'Ej: En la obra Quba, sector frente, las piezas de Mini Metal Shape Panel llegaron rayadas. Son aproximadamente 7 piezas del tramo FV1...'
-                    : tipo === 'minuta'
-                    ? 'Ej: Reunión en obra Kerschen hoy. Estuvieron Enrique y Rodrigo del estudio. Se definió que los tubos no llevarán tapa. Quedó pendiente el plano de la garita...'
-                    : 'Seleccioná el tipo de registro y describí qué pasó...'
-                }
-                rows={6}
-              />
-            </div>
+            {tipo === 'minuta' && (
+              <div className={styles.card}>
+                <p className={styles.sectionLabel}>Contá qué pasó</p>
+                <button
+                  className={`${styles.audioBtn} ${isRecording ? styles.recording : ''} ${audioReady === 'listo' ? styles.audioReady : ''} ${audioReady === 'transcribiendo' ? styles.audioTranscribiendo : ''} ${audioReady === 'error' ? styles.audioError : ''}`}
+                  onClick={toggleRecording}
+                  disabled={audioReady === 'transcribiendo'}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                    <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                    <line x1="12" y1="19" x2="12" y2="23"/>
+                    <line x1="8" y1="23" x2="16" y2="23"/>
+                  </svg>
+                  {isRecording
+                    ? 'Grabando... tocá para detener'
+                    : audioReady === 'transcribiendo'
+                    ? 'Transcribiendo...'
+                    : audioReady === 'listo'
+                    ? 'Audio transcripto ✓ — grabá otro si querés'
+                    : audioReady === 'error'
+                    ? 'Error al transcribir — intentá de nuevo'
+                    : 'Grabar audio'}
+                </button>
+                <div className={styles.divider}>o escribí directamente</div>
+                <textarea
+                  className={styles.textarea}
+                  value={inputText}
+                  onChange={(e) => setInputText(e.target.value)}
+                  placeholder="Ej: Reunión en obra Kerschen hoy. Estuvieron Enrique y Rodrigo del estudio. Se definió que los tubos no llevarán tapa. Quedó pendiente el plano de la garita..."
+                  rows={6}
+                />
+              </div>
+            )}
 
             <button className={styles.btnPrimary} onClick={processInput} disabled={!canSubmit}>
               Generar documento
