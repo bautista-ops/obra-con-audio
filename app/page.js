@@ -28,6 +28,8 @@ export default function Home() {
   const [contactoNombre, setContactoNombre] = useState('')
   const [emailComercial, setEmailComercial] = useState('')
   const [indiceProyecto, setIndiceProyecto] = useState(-1)
+  const [guardandoOdoo, setGuardandoOdoo] = useState(false)
+  const [guardadoOdoo, setGuardadoOdoo] = useState(false)
   const mediaRecorderRef = useRef(null)
   const audioChunksRef = useRef([])
 
@@ -183,6 +185,131 @@ export default function Home() {
     }
   }
 
+
+  const guardarEnOdoo = async () => {
+    if (!result || !result.proyecto_id) return
+    setGuardandoOdoo(true)
+    try {
+      const { jsPDF } = await import('jspdf')
+      const doc = new jsPDF({ unit: 'mm', format: 'a4' })
+      const pageW = doc.internal.pageSize.getWidth()
+      const pageH = doc.internal.pageSize.getHeight()
+      const margin = 20
+
+      const loadImage = (url) => new Promise((resolve) => {
+        const img = new window.Image()
+        img.crossOrigin = 'anonymous'
+        img.onload = () => {
+          const canvas = document.createElement('canvas')
+          canvas.width = img.width
+          canvas.height = img.height
+          canvas.getContext('2d').drawImage(img, 0, 0)
+          resolve(canvas.toDataURL('image/png'))
+        }
+        img.src = url
+      })
+
+      const logoData = await loadImage('/logo.png')
+      doc.addImage(logoData, 'PNG', margin, 10, 35, 14)
+      doc.setDrawColor(200, 169, 110)
+      doc.setLineWidth(0.5)
+      doc.line(margin, 27, pageW - margin, 27)
+
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(13)
+      doc.setTextColor(20, 20, 20)
+      const titulo = result.tipo === 'minuta' ? 'MINUTA DE REUNIÓN DE OBRA' : 'NO CONFORMIDAD — REPORTE'
+      doc.text(titulo, margin, 36)
+
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(10)
+      doc.setTextColor(100, 100, 100)
+      doc.text(result.obra || result.proyecto || '', margin, 43)
+      doc.text(result.fecha || new Date().toLocaleDateString('es-AR'), pageW - margin, 43, { align: 'right' })
+
+      let y = 52
+
+      const addSeccion = (tituloSec, items) => {
+        if (!items || (Array.isArray(items) && items.length === 0)) return
+        if (y > pageH - 30) { doc.addPage(); y = 20 }
+        doc.setFont('helvetica', 'bold')
+        doc.setFontSize(9)
+        doc.setTextColor(200, 169, 110)
+        doc.text(tituloSec.toUpperCase(), margin, y)
+        y += 5
+        doc.setFont('helvetica', 'normal')
+        doc.setFontSize(9)
+        doc.setTextColor(40, 40, 40)
+        const lista = Array.isArray(items) ? items : [items]
+        for (const item of lista) {
+          if (!item) continue
+          const lineas = doc.splitTextToSize('• ' + item, pageW - margin * 2)
+          for (const linea of lineas) {
+            if (y > pageH - 30) { doc.addPage(); y = 20 }
+            doc.text(linea, margin, y)
+            y += 5
+          }
+        }
+        y += 3
+      }
+
+      if (result.tipo === 'minuta') {
+        addSeccion('Lugar', [result.lugar])
+        addSeccion('Asistentes', result.asistentes)
+        addSeccion('Temas tratados', result.temas)
+        addSeccion('Acuerdos y decisiones', result.acuerdos)
+        addSeccion('Pendientes', result.pendientes)
+        addSeccion('Próxima visita', [result.proxima_visita])
+      } else {
+        addSeccion('Producto', [result.producto + (result.terminacion ? ' — ' + result.terminacion : '')])
+        addSeccion('Sector origen', [result.sector])
+        addSeccion('Causa', [result.causa])
+        addSeccion('Descripción', [result.descripcion])
+        addSeccion('Piezas afectadas', [result.piezas_cantidad])
+        addSeccion('Contramedidas', result.contramedidas)
+        addSeccion('Costo estimado', [result.costo_estimado])
+        addSeccion('Clasificación', [result.clasificacion])
+      }
+
+      doc.setDrawColor(200, 169, 110)
+      doc.line(margin, pageH - 15, pageW - margin, pageH - 15)
+      doc.setFontSize(7)
+      doc.setTextColor(150, 150, 150)
+      doc.text('MSH. Shaping the future of Metal  |  +5411 5263 0413  |  info@grupomsh.com.ar  |  www.grupomsh.com.ar', pageW / 2, pageH - 9, { align: 'center' })
+
+      const pdfBase64 = doc.output('datauristring').split(',')[1]
+      const obraSlug = (result.obra || result.proyecto || 'msh').replace(/[^a-z0-9]/gi, '_')
+      const fechaSlug = (result.fecha || '').replace(/\//g, '-')
+      const nombreArchivo = 'minuta_' + obraSlug + '_' + fechaSlug + '.pdf'
+
+      const res = await fetch('/api/guardar-odoo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          proyecto_id: result.proyecto_id,
+          tipo: result.tipo,
+          fecha: result.fecha,
+          obra: result.obra || result.proyecto,
+          pdf_base64: pdfBase64,
+          pdf_nombre: nombreArchivo,
+        })
+      })
+
+      const data = await res.json()
+      if (data.ok) {
+        setGuardadoOdoo(true)
+      } else {
+        alert('No se pudo guardar en ODOO: ' + (data.error || 'Error desconocido'))
+      }
+    } catch (err) {
+      console.error('Error guardando en ODOO:', err)
+      alert('Error al generar el PDF o guardar en ODOO')
+    } finally {
+      setGuardandoOdoo(false)
+    setGuardadoOdoo(false)
+    }
+  }
+
   const copyText = () => {
     if (!result) return
     const text = result.tipo === 'minuta' ? buildCuerpoMinuta(result) : buildReporteNC(result)
@@ -205,6 +332,7 @@ export default function Home() {
     setBusquedaAsistente('')
     setMostrarAsistentes(false)
     setFechaMinuta(new Date().toISOString().split('T')[0])
+  setGuardadoOdoo(false)
   }
 
   return (
@@ -609,6 +737,21 @@ export default function Home() {
                   <div className={styles.successMsg}>
                     <p>{result.tipo === 'minuta' ? 'Borrador copiado — pegalo en tu mail y revisalo antes de enviar' : 'Reporte copiado — envialo al responsable'}</p>
                   </div>
+                )}
+                {result.proyecto_id && (
+                  <button
+                    className={styles.copyBtn}
+                    onClick={guardarEnOdoo}
+                    disabled={guardandoOdoo || guardadoOdoo}
+                    style={{ width: '100%', marginTop: 4, opacity: guardadoOdoo ? 0.6 : 1 }}
+                  >
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                      <polyline points="17 8 12 3 7 8"/>
+                      <line x1="12" y1="3" x2="12" y2="15"/>
+                    </svg>
+                    {guardadoOdoo ? '✓ Guardado en ODOO' : guardandoOdoo ? 'Guardando...' : 'Guardar en ODOO'}
+                  </button>
                 )}
               </>
             )}

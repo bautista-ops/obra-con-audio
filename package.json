@@ -12,6 +12,7 @@
     "react": "^18",
     "react-dom": "^18",
     "@anthropic-ai/sdk": "^0.24.0",
-    "openai": "^4.52.0"
+    "openai": "^4.52.0",
+    "jspdf": "^2.5.1"
   }
 }
