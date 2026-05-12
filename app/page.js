@@ -191,7 +191,17 @@ export default function Home() {
     if (!result || !result.proyecto_id) return
     setGuardandoOdoo(true)
     try {
-      const { jsPDF } = await import('jspdf')
+      // Cargar jsPDF desde CDN si no está disponible
+      if (!window.jspdf) {
+        await new Promise((resolve, reject) => {
+          const script = document.createElement('script')
+          script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'
+          script.onload = resolve
+          script.onerror = reject
+          document.head.appendChild(script)
+        })
+      }
+      const { jsPDF } = window.jspdf
       const doc = new jsPDF({ unit: 'mm', format: 'a4' })
       const pageW = doc.internal.pageSize.getWidth()
       const pageH = doc.internal.pageSize.getHeight()
