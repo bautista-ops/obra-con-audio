@@ -563,52 +563,38 @@ export default function Home() {
                           )}
                         </div>
 
-                        {/* Buscador de pieza */}
+                        {/* Selector de pieza como botones */}
                         <div className={styles.ncCeldaPieza}>
                           <p className={styles.ncFieldLabel}>Pieza / Lote</p>
                           {item.lote ? (
                             <div className={styles.ncLoteSelected}>
                               <span className={styles.ncLoteNombre}>{item.lote.nombre}</span>
-                              <button onClick={() => setItemsNC(prev => prev.map((it, i) => i === rowIdx ? {...it, lote: null, busquedaLote: ''} : it))}>✕</button>
+                              <button onClick={() => setItemsNC(prev => prev.map((it, i) => i === rowIdx ? {...it, lote: null, busquedaLote: ''} : it))}>✕ Cambiar</button>
                             </div>
                           ) : (
-                            <div className={styles.searchWrapper} style={{position:'relative'}}>
+                            <>
                               <input
                                 className={styles.searchInput}
-                                placeholder="Buscá por nombre de pieza o etapa..."
+                                style={{ marginBottom: 8 }}
+                                placeholder="Filtrá para encontrar más rápido..."
                                 value={item.busquedaLote}
-                                onChange={(e) => setItemsNC(prev => prev.map((it, i) => i === rowIdx ? {...it, busquedaLote: e.target.value, mostrarLotes: true, indiceLote: -1} : it))}
-                                onFocus={() => setItemsNC(prev => prev.map((it, i) => i === rowIdx ? {...it, mostrarLotes: true} : it))}
-                                onBlur={() => setTimeout(() => setItemsNC(prev => prev.map((it, i) => i === rowIdx ? {...it, mostrarLotes: false, indiceLote: -1} : it)), 150)}
-                                onKeyDown={(e) => {
-                                  const q = item.busquedaLote.toLowerCase()
-                                  const filtrados = lotes.filter(l => l.nombre.toLowerCase().includes(q) || l.producto.toLowerCase().includes(q)).slice(0, 8)
-                                  if (e.key === 'ArrowDown') { e.preventDefault(); setItemsNC(prev => prev.map((it, i) => i === rowIdx ? {...it, indiceLote: Math.min(it.indiceLote + 1, filtrados.length - 1)} : it)) }
-                                  else if (e.key === 'ArrowUp') { e.preventDefault(); setItemsNC(prev => prev.map((it, i) => i === rowIdx ? {...it, indiceLote: Math.max(it.indiceLote - 1, 0)} : it)) }
-                                  else if (e.key === 'Enter' && item.indiceLote >= 0 && filtrados[item.indiceLote]) {
-                                    e.preventDefault()
-                                    setItemsNC(prev => prev.map((it, i) => i === rowIdx ? {...it, lote: filtrados[item.indiceLote], busquedaLote: '', mostrarLotes: false, indiceLote: -1} : it))
-                                  } else if (e.key === 'Escape') { setItemsNC(prev => prev.map((it, i) => i === rowIdx ? {...it, mostrarLotes: false} : it)) }
-                                }}
+                                onChange={(e) => setItemsNC(prev => prev.map((it, i) => i === rowIdx ? {...it, busquedaLote: e.target.value} : it))}
                               />
-                              {item.mostrarLotes && item.busquedaLote.length >= 2 && (() => {
-                                const q = item.busquedaLote.toLowerCase()
-                                const filtrados = lotes.filter(l => l.nombre.toLowerCase().includes(q) || l.producto.toLowerCase().includes(q)).slice(0, 8)
-                                return filtrados.length > 0 ? (
-                                  <div className={styles.searchResults}>
-                                    {filtrados.map((l, idx) => (
-                                      <button key={l.id}
-                                        className={styles.searchResultItem + (idx === item.indiceLote ? ' ' + styles.searchResultItemActivo : '')}
-                                        onMouseDown={() => setItemsNC(prev => prev.map((it, i) => i === rowIdx ? {...it, lote: l, busquedaLote: '', mostrarLotes: false, indiceLote: -1} : it))}
-                                      >
-                                        <span className={styles.searchResultNombre}>{l.nombre}</span>
-                                        {l.producto && <span className={styles.searchResultComercial}>{l.producto}</span>}
-                                      </button>
-                                    ))}
-                                  </div>
-                                ) : <div className={styles.searchResults}><p className={styles.searchNoResult}>Sin coincidencias</p></div>
-                              })()}
-                            </div>
+                              <div className={styles.ncOpciones}>
+                                {lotes
+                                  .filter(l => !item.busquedaLote || l.nombre.toLowerCase().includes(item.busquedaLote.toLowerCase()) || l.producto.toLowerCase().includes(item.busquedaLote.toLowerCase()))
+                                  .map(l => (
+                                    <button
+                                      key={l.id}
+                                      className={styles.ncOpcionBtn}
+                                      onClick={() => setItemsNC(prev => prev.map((it, i) => i === rowIdx ? {...it, lote: l, busquedaLote: ''} : it))}
+                                    >
+                                      {l.nombre}
+                                    </button>
+                                  ))
+                                }
+                              </div>
+                            </>
                           )}
                         </div>
 
