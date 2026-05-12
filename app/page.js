@@ -563,39 +563,22 @@ export default function Home() {
                           )}
                         </div>
 
-                        {/* Selector de pieza como botones */}
+                        {/* Selector de pieza — dropdown */}
                         <div className={styles.ncCeldaPieza}>
                           <p className={styles.ncFieldLabel}>Pieza / Lote</p>
-                          {item.lote ? (
-                            <div className={styles.ncLoteSelected}>
-                              <span className={styles.ncLoteNombre}>{item.lote.nombre}</span>
-                              <button onClick={() => setItemsNC(prev => prev.map((it, i) => i === rowIdx ? {...it, lote: null, busquedaLote: ''} : it))}>✕ Cambiar</button>
-                            </div>
-                          ) : (
-                            <>
-                              <input
-                                className={styles.searchInput}
-                                style={{ marginBottom: 8 }}
-                                placeholder="Filtrá para encontrar más rápido..."
-                                value={item.busquedaLote}
-                                onChange={(e) => setItemsNC(prev => prev.map((it, i) => i === rowIdx ? {...it, busquedaLote: e.target.value} : it))}
-                              />
-                              <div className={styles.ncOpciones}>
-                                {lotes
-                                  .filter(l => !item.busquedaLote || l.nombre.toLowerCase().includes(item.busquedaLote.toLowerCase()) || l.producto.toLowerCase().includes(item.busquedaLote.toLowerCase()))
-                                  .map(l => (
-                                    <button
-                                      key={l.id}
-                                      className={styles.ncOpcionBtn}
-                                      onClick={() => setItemsNC(prev => prev.map((it, i) => i === rowIdx ? {...it, lote: l, busquedaLote: ''} : it))}
-                                    >
-                                      {l.nombre}
-                                    </button>
-                                  ))
-                                }
-                              </div>
-                            </>
-                          )}
+                          <select
+                            className={styles.ncSelect}
+                            value={item.lote ? item.lote.id : ''}
+                            onChange={(e) => {
+                              const lote = lotes.find(l => l.id === parseInt(e.target.value)) || null
+                              setItemsNC(prev => prev.map((it, i) => i === rowIdx ? {...it, lote} : it))
+                            }}
+                          >
+                            <option value="">Seleccioná una pieza...</option>
+                            {lotes.map(l => (
+                              <option key={l.id} value={l.id}>{l.nombre}</option>
+                            ))}
+                          </select>
                         </div>
 
                         {/* Defecto + Causa */}
