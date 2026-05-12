@@ -168,8 +168,14 @@ export default function Home() {
       : `No Conformidad — ${result.proyecto || 'MSH'}`
     const cuerpo = result.tipo === 'minuta' ? buildCuerpoMinuta(result) : buildReporteNC(result)
     const destinatario = emailCliente || ''
-    const gmailUrl = `https://mail.google.com/mail/?view=cm&to=${encodeURIComponent(destinatario)}&su=${encodeURIComponent(asunto)}&body=${encodeURIComponent(cuerpo)}`
-    window.open(gmailUrl, '_blank')
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
+    if (isIOS) {
+      const mailtoUrl = `mailto:${destinatario}?subject=${encodeURIComponent(asunto)}&body=${encodeURIComponent(cuerpo)}`
+      window.location.href = mailtoUrl
+    } else {
+      const gmailUrl = `https://mail.google.com/mail/?view=cm&to=${encodeURIComponent(destinatario)}&su=${encodeURIComponent(asunto)}&body=${encodeURIComponent(cuerpo)}`
+      window.open(gmailUrl, '_blank')
+    }
   }
 
   const copyText = () => {
