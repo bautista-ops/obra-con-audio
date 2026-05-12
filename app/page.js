@@ -30,6 +30,7 @@ export default function Home() {
   const [indiceProyecto, setIndiceProyecto] = useState(-1)
   const [guardandoOdoo, setGuardandoOdoo] = useState(false)
   const [guardadoOdoo, setGuardadoOdoo] = useState(false)
+  const [indiceAsistente, setIndiceAsistente] = useState(-1)
   const mediaRecorderRef = useRef(null)
   const audioChunksRef = useRef([])
 
@@ -528,16 +529,17 @@ export default function Home() {
                       .slice(0, 6)
                     return (
                       <div className={styles.searchResults}>
-                        {sugeridos.map(e => (
+                        {sugeridos.map((e, idx) => (
                           <button
                             key={e.id}
-                            className={styles.searchResultItem}
+                            className={styles.searchResultItem + (idx === indiceAsistente ? ' ' + styles.searchResultItemActivo : '')}
                             onMouseDown={() => {
                               if (!asistentes.includes(e.nombre)) {
                                 setAsistentes(prev => [...prev, e.nombre])
                               }
                               setBusquedaAsistente('')
                               setMostrarAsistentes(false)
+                              setIndiceAsistente(-1)
                             }}
                           >
                             <span className={styles.searchResultNombre}>{e.nombre}</span>
