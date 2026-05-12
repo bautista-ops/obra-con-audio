@@ -207,38 +207,33 @@ export default function Home() {
       const pageH = doc.internal.pageSize.getHeight()
       const margin = 20
 
-      const loadImage = (url) => new Promise((resolve) => {
-        const img = new window.Image()
-        img.crossOrigin = 'anonymous'
-        img.onload = () => {
-          const canvas = document.createElement('canvas')
-          canvas.width = img.width
-          canvas.height = img.height
-          canvas.getContext('2d').drawImage(img, 0, 0)
-          resolve(canvas.toDataURL('image/png'))
-        }
-        img.src = url
-      })
+      // Header — MSH en texto, sin imagen
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(18)
+      doc.setTextColor(200, 169, 110)
+      doc.text('MSH', margin, 18)
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(8)
+      doc.setTextColor(150, 150, 150)
+      doc.text('Shaping the future of Metal', margin + 18, 18)
 
-      const logoData = await loadImage('/logo.png')
-      doc.addImage(logoData, 'PNG', margin, 10, 35, 14)
       doc.setDrawColor(200, 169, 110)
       doc.setLineWidth(0.5)
-      doc.line(margin, 27, pageW - margin, 27)
+      doc.line(margin, 22, pageW - margin, 22)
 
       doc.setFont('helvetica', 'bold')
       doc.setFontSize(13)
       doc.setTextColor(20, 20, 20)
       const titulo = result.tipo === 'minuta' ? 'MINUTA DE REUNIÓN DE OBRA' : 'NO CONFORMIDAD — REPORTE'
-      doc.text(titulo, margin, 36)
+      doc.text(titulo, margin, 31)
 
       doc.setFont('helvetica', 'normal')
       doc.setFontSize(10)
       doc.setTextColor(100, 100, 100)
-      doc.text(result.obra || result.proyecto || '', margin, 43)
-      doc.text(result.fecha || new Date().toLocaleDateString('es-AR'), pageW - margin, 43, { align: 'right' })
+      doc.text(result.obra || result.proyecto || '', margin, 38)
+      doc.text(result.fecha || new Date().toLocaleDateString('es-AR'), pageW - margin, 38, { align: 'right' })
 
-      let y = 52
+      let y = 47
 
       const addSeccion = (tituloSec, items) => {
         if (!items || (Array.isArray(items) && items.length === 0)) return
