@@ -912,7 +912,7 @@ export default function Home() {
                           }
                         </div>
                       </>
-                    : <>Notificar a: <strong>Responsable de operaciones · Jefe de planta{result.comercial ? ` · ${result.comercial}` : ''}</strong></>
+                    : <>Notificar a: <strong>Eric Regner · Joaquín Urién{result.comercial ? ` · ${result.comercial}` : ''}</strong></>
                   }
                 </div>
                 <div style={{ display: 'flex', gap: 10 }}>
@@ -923,7 +923,7 @@ export default function Home() {
                     </svg>
                     {copied ? 'Copiado ✓' : result.tipo === 'minuta' ? 'Copiar borrador' : 'Copiar reporte'}
                   </button>
-                  {result.tipo === 'minuta' && (
+                  {(result.tipo === 'minuta' || (result.tipo === 'nc' && result.resolucion?.includes('refabricación'))) && (
                     <button className={styles.copyBtn} onClick={abrirMail} style={{ flex: 1 }}>
                       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                         <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
