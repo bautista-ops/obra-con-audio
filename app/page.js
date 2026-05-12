@@ -509,16 +509,40 @@ export default function Home() {
                     className={styles.searchInput}
                     placeholder="Agregá asistentes de MSH o externos..."
                     value={busquedaAsistente}
-                    onChange={(e) => { setBusquedaAsistente(e.target.value); setMostrarAsistentes(true); }}
+                    onChange={(e) => { setBusquedaAsistente(e.target.value); setMostrarAsistentes(true); setIndiceAsistente(-1); }}
                     onFocus={() => setMostrarAsistentes(true)}
-                    onBlur={() => setTimeout(() => setMostrarAsistentes(false), 150)}
+                    onBlur={() => setTimeout(() => { setMostrarAsistentes(false); setIndiceAsistente(-1); }, 150)}
                     onKeyDown={(e) => {
-                      if (e.key === 'Enter' && busquedaAsistente.trim()) {
-                        if (!asistentes.includes(busquedaAsistente.trim())) {
-                          setAsistentes(prev => [...prev, busquedaAsistente.trim()])
+                      const q = busquedaAsistente.toLowerCase()
+                      const sugeridos = empleados
+                        .filter(em => em.nombre.toLowerCase().includes(q) && !asistentes.includes(em.nombre))
+                        .slice(0, 6)
+                      if (e.key === 'ArrowDown') {
+                        e.preventDefault()
+                        setMostrarAsistentes(true)
+                        setIndiceAsistente(i => Math.min(i + 1, sugeridos.length - 1))
+                      } else if (e.key === 'ArrowUp') {
+                        e.preventDefault()
+                        setIndiceAsistente(i => Math.max(i - 1, 0))
+                      } else if (e.key === 'Enter') {
+                        e.preventDefault()
+                        if (indiceAsistente >= 0 && sugeridos[indiceAsistente]) {
+                          const nombre = sugeridos[indiceAsistente].nombre
+                          if (!asistentes.includes(nombre)) setAsistentes(prev => [...prev, nombre])
+                          setBusquedaAsistente('')
+                          setMostrarAsistentes(false)
+                          setIndiceAsistente(-1)
+                        } else if (busquedaAsistente.trim()) {
+                          if (!asistentes.includes(busquedaAsistente.trim())) {
+                            setAsistentes(prev => [...prev, busquedaAsistente.trim()])
+                          }
+                          setBusquedaAsistente('')
+                          setMostrarAsistentes(false)
+                          setIndiceAsistente(-1)
                         }
-                        setBusquedaAsistente('')
+                      } else if (e.key === 'Escape') {
                         setMostrarAsistentes(false)
+                        setIndiceAsistente(-1)
                       }
                     }}
                   />
