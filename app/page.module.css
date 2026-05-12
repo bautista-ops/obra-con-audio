@@ -684,62 +684,80 @@
   border-color: #c8a96e;
 }
 
-/* NC — Tabla de piezas */
+/* NC — Cards por pieza */
 .ncTabla {
   display: flex;
   flex-direction: column;
-  gap: 0;
-  border: 1px solid #e0ddd8;
-  border-radius: 8px;
-  overflow: visible;
+  gap: 10px;
 }
 
-.ncTablaHeader {
-  display: grid;
-  grid-template-columns: 2fr 1.2fr 1.2fr 0.5fr 1.5fr 28px;
+.ncTablaHeader { display: none; }
+
+.ncTablaFila {
+  border: 1px solid #e0ddd8;
+  border-radius: 10px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: #fafaf9;
+}
+
+.ncFilaTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   gap: 8px;
-  padding: 8px 12px;
-  background: #f7f6f4;
-  border-radius: 8px 8px 0 0;
+}
+
+.ncFilaNumero {
   font-size: 11px;
   font-weight: 600;
-  color: #888;
+  color: #c8a96e;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
-.ncTablaFila {
+.ncFilaGrid {
   display: grid;
-  grid-template-columns: 2fr 1.2fr 1.2fr 0.5fr 1.5fr 28px;
+  grid-template-columns: 1fr 1fr;
   gap: 8px;
-  padding: 10px 12px;
-  border-top: 1px solid #e0ddd8;
-  align-items: start;
 }
 
-.ncTablaFila:last-of-type {
-  border-radius: 0;
+.ncFilaGridFull {
+  display: grid;
+  grid-template-columns: 1fr 1fr 80px;
+  gap: 8px;
+}
+
+.ncFieldLabel {
+  font-size: 10px;
+  font-weight: 600;
+  color: #aaa;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
 }
 
 .ncCeldaPieza {
   position: relative;
+  grid-column: 1 / -1;
 }
 
 .ncCelda {
   display: flex;
-  align-items: flex-start;
+  flex-direction: column;
 }
 
 .ncCeldaCant {
   display: flex;
-  align-items: flex-start;
+  flex-direction: column;
 }
 
 .ncCeldaEliminar {
   display: flex;
   align-items: center;
-  justify-content: center;
-  padding-top: 4px;
+  justify-content: flex-end;
 }
 
 .ncLoteSelected {

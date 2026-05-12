@@ -551,12 +551,21 @@ export default function Home() {
                       <span></span>
                     </div>
 
-                    {/* Filas */}
+                    {/* Cards por pieza */}
                     {itemsNC.map((item, rowIdx) => (
                       <div key={item.id} className={styles.ncTablaFila}>
 
-                        {/* Pieza */}
+                        {/* Header de fila */}
+                        <div className={styles.ncFilaTop}>
+                          <span className={styles.ncFilaNumero}>Pieza {rowIdx + 1}</span>
+                          {itemsNC.length > 1 && (
+                            <button className={styles.ncEliminarBtn} onClick={() => setItemsNC(prev => prev.filter((_, i) => i !== rowIdx))}>✕ Eliminar</button>
+                          )}
+                        </div>
+
+                        {/* Buscador de pieza */}
                         <div className={styles.ncCeldaPieza}>
+                          <p className={styles.ncFieldLabel}>Pieza / Lote</p>
                           {item.lote ? (
                             <div className={styles.ncLoteSelected}>
                               <span className={styles.ncLoteNombre}>{item.lote.nombre}</span>
@@ -565,8 +574,8 @@ export default function Home() {
                           ) : (
                             <div className={styles.searchWrapper} style={{position:'relative'}}>
                               <input
-                                className={styles.ncInput}
-                                placeholder="Buscar pieza..."
+                                className={styles.searchInput}
+                                placeholder="Buscá por nombre de pieza o etapa..."
                                 value={item.busquedaLote}
                                 onChange={(e) => setItemsNC(prev => prev.map((it, i) => i === rowIdx ? {...it, busquedaLote: e.target.value, mostrarLotes: true, indiceLote: -1} : it))}
                                 onFocus={() => setItemsNC(prev => prev.map((it, i) => i === rowIdx ? {...it, mostrarLotes: true} : it))}
@@ -603,39 +612,36 @@ export default function Home() {
                           )}
                         </div>
 
-                        {/* Defecto */}
-                        <div className={styles.ncCelda}>
-                          <select className={styles.ncSelect} value={item.defecto} onChange={(e) => setItemsNC(prev => prev.map((it, i) => i === rowIdx ? {...it, defecto: e.target.value} : it))}>
-                            <option value="">—</option>
-                            {['Rayada', 'Golpeada', 'Mal pintada', 'Mal plegada', 'Medida incorrecta', 'Faltante', 'Color incorrecto', 'Otro'].map(d => <option key={d} value={d}>{d}</option>)}
-                          </select>
+                        {/* Defecto + Causa */}
+                        <div className={styles.ncFilaGrid}>
+                          <div className={styles.ncCelda}>
+                            <p className={styles.ncFieldLabel}>Defecto</p>
+                            <select className={styles.ncSelect} value={item.defecto} onChange={(e) => setItemsNC(prev => prev.map((it, i) => i === rowIdx ? {...it, defecto: e.target.value} : it))}>
+                              <option value="">Seleccioná...</option>
+                              {['Rayada', 'Golpeada', 'Mal pintada', 'Mal plegada', 'Medida incorrecta', 'Faltante', 'Color incorrecto', 'Otro'].map(d => <option key={d} value={d}>{d}</option>)}
+                            </select>
+                          </div>
+                          <div className={styles.ncCelda}>
+                            <p className={styles.ncFieldLabel}>Causa</p>
+                            <select className={styles.ncSelect} value={item.causa} onChange={(e) => setItemsNC(prev => prev.map((it, i) => i === rowIdx ? {...it, causa: e.target.value} : it))}>
+                              <option value="">Seleccioná...</option>
+                              {['Planos / Doc.', 'Mano de obra', 'Máquina', 'Proveedor', 'Comunicación', 'Otra'].map(ca => <option key={ca} value={ca}>{ca}</option>)}
+                            </select>
+                          </div>
                         </div>
 
-                        {/* Causa */}
-                        <div className={styles.ncCelda}>
-                          <select className={styles.ncSelect} value={item.causa} onChange={(e) => setItemsNC(prev => prev.map((it, i) => i === rowIdx ? {...it, causa: e.target.value} : it))}>
-                            <option value="">—</option>
-                            {['Planos / Doc.', 'Mano de obra', 'Máquina', 'Proveedor', 'Comunicación', 'Otra'].map(ca => <option key={ca} value={ca}>{ca}</option>)}
-                          </select>
-                        </div>
-
-                        {/* Cantidad */}
-                        <div className={styles.ncCeldaCant}>
-                          <input type="number" min="1" className={styles.ncInputCant} value={item.cantidad}
-                            onChange={(e) => setItemsNC(prev => prev.map((it, i) => i === rowIdx ? {...it, cantidad: e.target.value} : it))} />
-                        </div>
-
-                        {/* Observaciones */}
-                        <div className={styles.ncCelda}>
-                          <input className={styles.ncInput} placeholder="Opcional..." value={item.observaciones}
-                            onChange={(e) => setItemsNC(prev => prev.map((it, i) => i === rowIdx ? {...it, observaciones: e.target.value} : it))} />
-                        </div>
-
-                        {/* Eliminar fila */}
-                        <div className={styles.ncCeldaEliminar}>
-                          {itemsNC.length > 1 && (
-                            <button className={styles.ncEliminarBtn} onClick={() => setItemsNC(prev => prev.filter((_, i) => i !== rowIdx))}>✕</button>
-                          )}
+                        {/* Cantidad + Observaciones */}
+                        <div className={styles.ncFilaGridFull}>
+                          <div className={styles.ncCeldaCant}>
+                            <p className={styles.ncFieldLabel}>Cantidad</p>
+                            <input type="number" min="1" className={styles.ncSelect} value={item.cantidad}
+                              onChange={(e) => setItemsNC(prev => prev.map((it, i) => i === rowIdx ? {...it, cantidad: e.target.value} : it))} />
+                          </div>
+                          <div className={styles.ncCelda} style={{gridColumn: '2 / 4'}}>
+                            <p className={styles.ncFieldLabel}>Observaciones</p>
+                            <input className={styles.ncSelect} placeholder="Opcional..." value={item.observaciones}
+                              onChange={(e) => setItemsNC(prev => prev.map((it, i) => i === rowIdx ? {...it, observaciones: e.target.value} : it))} />
+                          </div>
                         </div>
                       </div>
                     ))}
