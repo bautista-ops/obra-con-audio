@@ -634,7 +634,7 @@ export default function Home() {
                             <p className={styles.ncFieldLabel}>Defecto</p>
                             <select className={styles.ncSelect} value={item.defecto} onChange={(e) => setItemsNC(prev => prev.map((it, i) => i === rowIdx ? {...it, defecto: e.target.value} : it))}>
                               <option value="">Seleccioná...</option>
-                              {['Rayada', 'Golpeada', 'Pintada', 'Plegada', 'Medida incorrecta', 'Faltante', 'Color incorrecto', 'Soldadura', 'Diseño', 'Mecanizado', 'Documentación', 'Otro'].map(d => <option key={d} value={d}>{d}</option>)}
+                              {['Rayada', 'Golpeada', 'Pintado', 'Plegado', 'Medida incorrecta', 'Faltante', 'Color incorrecto', 'Soldadura', 'Diseño', 'Mecanizado', 'Documentación', 'Otro'].map(d => <option key={d} value={d}>{d}</option>)}
                             </select>
                           </div>
                           <div className={styles.ncCelda}>
@@ -957,7 +957,7 @@ export default function Home() {
                         </div>
                       </>
                     : <>
-                        Detectado por: <strong>{result.detectado_por || result.departamento_nc || 'A confirmar'}</strong>
+                        Detectado por: <strong>{result.detectado_por?.trim() || result.departamento_nc || 'A confirmar'}</strong>
                         <br/>
                         Notificar a: <strong>Eric Regner · Joaquín Urién{result.comercial ? ` · ${result.comercial}` : ''}</strong>
                       </>
