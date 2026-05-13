@@ -865,3 +865,52 @@
 .ncAgregarBtn:hover {
   background: #faf8f4;
 }
+
+/* Double check nuevo registro */
+.confirmModal {
+  border: 1px solid #e0ddd8;
+  border-radius: 10px;
+  padding: 16px;
+  background: #faf8f4;
+}
+
+.confirmText {
+  font-size: 14px;
+  color: #444;
+  margin-bottom: 12px;
+  line-height: 1.5;
+}
+
+.confirmBtns {
+  display: flex;
+  gap: 10px;
+}
+
+.confirmSi {
+  flex: 1;
+  padding: 10px;
+  background: #c0392b;
+  border: none;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.confirmSi:hover { background: #a93226; }
+
+.confirmNo {
+  flex: 1;
+  padding: 10px;
+  background: #f0ede8;
+  border: 1px solid #e0ddd8;
+  border-radius: 8px;
+  color: #444;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.confirmNo:hover { border-color: #c8a96e; color: #c8a96e; }

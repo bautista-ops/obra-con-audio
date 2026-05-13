@@ -29,11 +29,14 @@ export default function Home() {
   const [emailComercial, setEmailComercial] = useState('')
   const [indiceProyecto, setIndiceProyecto] = useState(-1)
   const [guardandoOdoo, setGuardandoOdoo] = useState(false)
+  const [gravedadNC, setGravedadNC] = useState('')
+  const [urgenciaNC, setUrgenciaNC] = useState('')
   const [guardadoOdoo, setGuardadoOdoo] = useState(false)
   const [indiceAsistente, setIndiceAsistente] = useState(-1)
   // Estados NC
   const [lotes, setLotes] = useState([])
   const [detectadoPor, setDetectadoPor] = useState('')
+  const [departamentoNC, setDepartamentoNC] = useState('')
   const itemVacio = () => ({ id: Date.now(), lote: null, busquedaLote: '', mostrarLotes: false, indiceLote: -1, defecto: '', causa: '', cantidad: '1', observaciones: '' })
   const [itemsNC, setItemsNC] = useState([itemVacio()])
   const mediaRecorderRef = useRef(null)
@@ -174,6 +177,9 @@ export default function Home() {
                 observaciones: i.observaciones,
               })),
               detectadoPor,
+              departamento: departamentoNC,
+              gravedad: gravedadNC,
+              urgencia: urgenciaNC,
               resolucion,
             } : null,
           })
@@ -353,6 +359,8 @@ export default function Home() {
     } finally {
       setGuardandoOdoo(false)
     setGuardadoOdoo(false)
+  setGravedadNC('')
+  setUrgenciaNC('')
     }
   }
 
@@ -361,6 +369,8 @@ export default function Home() {
     const text = result.tipo === 'minuta' ? buildCuerpoMinuta(result) : buildReporteNC(result)
     navigator.clipboard.writeText(text).then(() => setCopied(true))
   }
+
+  const [showConfirmReset, setShowConfirmReset] = useState(false)
 
   const reset = () => {
     setStep('input')
@@ -381,6 +391,7 @@ export default function Home() {
   setGuardadoOdoo(false)
   setLotes([])
   setDetectadoPor('')
+  setDepartamentoNC('')
   setItemsNC([{ id: Date.now(), lote: null, busquedaLote: '', mostrarLotes: false, indiceLote: -1, defecto: '', causa: '', cantidad: '1', observaciones: '' }])
   }
 
@@ -623,14 +634,14 @@ export default function Home() {
                             <p className={styles.ncFieldLabel}>Defecto</p>
                             <select className={styles.ncSelect} value={item.defecto} onChange={(e) => setItemsNC(prev => prev.map((it, i) => i === rowIdx ? {...it, defecto: e.target.value} : it))}>
                               <option value="">Seleccioná...</option>
-                              {['Rayada', 'Golpeada', 'Mal pintada', 'Mal plegada', 'Medida incorrecta', 'Faltante', 'Color incorrecto', 'Otro'].map(d => <option key={d} value={d}>{d}</option>)}
+                              {['Rayada', 'Golpeada', 'Pintada', 'Plegada', 'Medida incorrecta', 'Faltante', 'Color incorrecto', 'Soldadura', 'Diseño', 'Mecanizado', 'Documentación', 'Otro'].map(d => <option key={d} value={d}>{d}</option>)}
                             </select>
                           </div>
                           <div className={styles.ncCelda}>
                             <p className={styles.ncFieldLabel}>Causa</p>
                             <select className={styles.ncSelect} value={item.causa} onChange={(e) => setItemsNC(prev => prev.map((it, i) => i === rowIdx ? {...it, causa: e.target.value} : it))}>
                               <option value="">Seleccioná...</option>
-                              {['Planos / Doc.', 'Mano de obra', 'Máquina', 'Proveedor', 'Comunicación', 'Otra'].map(ca => <option key={ca} value={ca}>{ca}</option>)}
+                              {['Planos / Doc.', 'Fabricación', 'Máquina', 'Proveedor', 'Comunicación', 'Logística', 'Otra'].map(ca => <option key={ca} value={ca}>{ca}</option>)}
                             </select>
                           </div>
                         </div>
@@ -659,11 +670,44 @@ export default function Home() {
                   </div>
                 </div>
 
-                {/* Detectado por */}
+                {/* Detectado por + Departamento */}
                 <div className={styles.card}>
                   <p className={styles.sectionLabel}>Detectado por</p>
-                  <input type="text" className={styles.searchInput} placeholder="Nombre de quien detectó el problema..."
-                    value={detectadoPor} onChange={(e) => setDetectadoPor(e.target.value)} />
+                  <div className={styles.ncFilaGrid}>
+                    <div className={styles.ncCelda}>
+                      <p className={styles.ncFieldLabel}>Departamento</p>
+                      <select className={styles.ncSelect} value={departamentoNC} onChange={(e) => setDepartamentoNC(e.target.value)}>
+                        <option value="">Seleccioná...</option>
+                        {['Oficina Técnica', 'Planta', 'Instalaciones', 'Logística', 'Comercial', 'Calidad', 'Ingeniería'].map(d => <option key={d} value={d}>{d}</option>)}
+                      </select>
+                    </div>
+                    <div className={styles.ncCelda}>
+                      <p className={styles.ncFieldLabel}>Nombre (opcional)</p>
+                      <input className={styles.ncSelect} placeholder="Nombre de quien detectó..."
+                        value={detectadoPor} onChange={(e) => setDetectadoPor(e.target.value)} />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Gravedad y Urgencia */}
+                <div className={styles.card}>
+                  <p className={styles.sectionLabel}>Clasificación</p>
+                  <div className={styles.ncFilaGrid}>
+                    <div className={styles.ncCelda}>
+                      <p className={styles.ncFieldLabel}>Gravedad</p>
+                      <select className={styles.ncSelect} value={gravedadNC} onChange={(e) => setGravedadNC(e.target.value)}>
+                        <option value="">Seleccioná...</option>
+                        {['Alta', 'Media', 'Baja'].map(g => <option key={g} value={g}>{g}</option>)}
+                      </select>
+                    </div>
+                    <div className={styles.ncCelda}>
+                      <p className={styles.ncFieldLabel}>Urgencia</p>
+                      <select className={styles.ncSelect} value={urgenciaNC} onChange={(e) => setUrgenciaNC(e.target.value)}>
+                        <option value="">Seleccioná...</option>
+                        {['Alta', 'Media', 'Baja'].map(u => <option key={u} value={u}>{u}</option>)}
+                      </select>
+                    </div>
+                  </div>
                 </div>
               </>
             )}
@@ -912,7 +956,11 @@ export default function Home() {
                           }
                         </div>
                       </>
-                    : <>Notificar a: <strong>Eric Regner · Joaquín Urién{result.comercial ? ` · ${result.comercial}` : ''}</strong></>
+                    : <>
+                        Detectado por: <strong>{result.detectado_por || result.departamento_nc || 'A confirmar'}</strong>
+                        <br/>
+                        Notificar a: <strong>Eric Regner · Joaquín Urién{result.comercial ? ` · ${result.comercial}` : ''}</strong>
+                      </>
                   }
                 </div>
                 <div style={{ display: 'flex', gap: 10 }}>
@@ -956,9 +1004,17 @@ export default function Home() {
               </>
             )}
 
-            <button className={styles.btnSecondary} onClick={reset}>
-              Nuevo registro
-            </button>
+            {showConfirmReset ? (
+              <div className={styles.confirmModal}>
+                <p className={styles.confirmText}>¿Seguro que querés empezar un nuevo registro? Perdés el documento actual.</p>
+                <div className={styles.confirmBtns}>
+                  <button className={styles.confirmSi} onClick={() => { reset(); setShowConfirmReset(false) }}>Sí, nuevo registro</button>
+                  <button className={styles.confirmNo} onClick={() => setShowConfirmReset(false)}>Cancelar</button>
+                </div>
+              </div>
+            ) : (
+              <button className={styles.btnSecondary} onClick={() => setShowConfirmReset(true)}>Nuevo registro</button>
+            )}
           </>
         )}
       </div>

@@ -39,7 +39,7 @@ export async function POST(request) {
     const uid = await odooAuth()
     if (!uid) return Response.json({ error: 'Auth ODOO fallida' }, { status: 401 })
 
-    // 1. Crear adjunto (ir.attachment) con el PDF
+    // 1. Crear adjunto PDF
     const adjuntoRes = await fetch(`${url}/xmlrpc/2/object`, {
       method: 'POST',
       headers: { 'Content-Type': 'text/xml' },
@@ -75,9 +75,60 @@ export async function POST(request) {
       return Response.json({ error: 'No se pudo crear el adjunto en ODOO' }, { status: 500 })
     }
 
-    // 2. Postear nota en el chatter con el adjunto vinculado
+    // 2. Buscar partner_ids de Joaquín y Eric para notificar
+    const partnerRes = await fetch(`${url}/xmlrpc/2/object`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/xml' },
+      body: `<?xml version="1.0"?>
+<methodCall>
+  <methodName>execute_kw</methodName>
+  <params>
+    <param><value><string>${DB}</string></value></param>
+    <param><value><int>${uid}</int></value></param>
+    <param><value><string>${apiKey}</string></value></param>
+    <param><value><string>res.partner</string></value></param>
+    <param><value><string>search_read</string></value></param>
+    <param><value><array><data>
+      <value><array><data>
+        <value><array><data>
+          <value><string>email</string></value>
+          <value><string>in</string></value>
+          <value><array><data>
+            <value><string>joaquin@grupomsh.com.ar</string></value>
+            <value><string>eric@grupomsh.com.ar</string></value>
+          </data></array></value>
+        </data></array></value>
+      </data></array></value>
+    </data></array></value></param>
+    <param><value><struct>
+      <member><name>fields</name>
+        <value><array><data>
+          <value><string>id</string></value>
+          <value><string>email</string></value>
+        </data></array></value>
+      </member>
+      <member><name>limit</name><value><int>5</int></value></member>
+    </struct></value></param>
+  </params>
+</methodCall>`
+    })
+
+    const partnerXml = await partnerRes.text()
+    const partnerIds = []
+    const pidMatches = partnerXml.matchAll(/<name>id<\/name>\s*<value><int>(\d+)<\/int>/g)
+    for (const m of pidMatches) partnerIds.push(parseInt(m[1]))
+
+    const partnerIdsXml = partnerIds.map(id =>
+      `<value><array><data><value><int>4</int></value><value><int>0</int></value><value><int>${id}</int></value></data></array></value>`
+    ).join('')
+
+    // 3. Postear nota con adjunto y notificación
     const tipoLabel = tipo === 'minuta' ? '📋 Minuta de reunión' : '⚠️ No Conformidad'
     const cuerpoNota = `${tipoLabel} — ${fecha || new Date().toLocaleDateString('es-AR')}&lt;br/&gt;Obra: ${obra || 'Sin especificar'}&lt;br/&gt;&lt;br/&gt;Registrada desde MSH Asistente de Obra. Ver PDF adjunto.`
+
+    const partnerMember = partnerIds.length > 0
+      ? `<member><name>partner_ids</name><value><array><data>${partnerIdsXml}</data></array></value></member>`
+      : ''
 
     const notaRes = await fetch(`${url}/xmlrpc/2/object`, {
       method: 'POST',
@@ -107,6 +158,7 @@ export async function POST(request) {
           </data></array></value>
         </data></array></value>
       </member>
+      ${partnerMember}
     </struct></value></param>
   </params>
 </methodCall>`
@@ -119,6 +171,7 @@ export async function POST(request) {
       ok: true,
       adjunto_id: adjuntoId,
       msg_id: msgIdM ? parseInt(msgIdM[1]) : null,
+      notificados: partnerIds.length,
     })
 
   } catch (error) {
