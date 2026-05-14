@@ -35,6 +35,8 @@ export default function Home() {
   const [indiceAsistente, setIndiceAsistente] = useState(-1)
   // Estados NC
   const [lotes, setLotes] = useState([])
+  const [numObra, setNumObra] = useState('')
+  const [buscandoLotes, setBuscandoLotes] = useState(false)
   const [detectadoPor, setDetectadoPor] = useState('')
   const [departamentoNC, setDepartamentoNC] = useState('')
   const itemVacio = () => ({ id: Date.now(), lote: null, busquedaLote: '', mostrarLotes: false, indiceLote: -1, defecto: '', causa: '', cantidad: '1', observaciones: '' })
@@ -54,6 +56,20 @@ export default function Home() {
       .catch(e => console.error('Error cargando empleados:', e))
   }, [])
 
+  const buscarLotesPorNumero = async (num) => {
+    if (!num || num.length < 3) return
+    setBuscandoLotes(true)
+    try {
+      const res = await fetch(`/api/lotes?proyecto=${num}`)
+      const data = await res.json()
+      if (data.lotes) setLotes(data.lotes)
+    } catch (e) {
+      console.error('Error buscando lotes:', e)
+    } finally {
+      setBuscandoLotes(false)
+    }
+  }
+
   const seleccionarProyecto = (p) => {
     setProyectoSeleccionado(p)
     setBusqueda(p.nombre)
@@ -61,6 +77,8 @@ export default function Home() {
     setEmailCliente('')
     setContactoNombre('')
     setEmailComercial('')
+    setLotes([])
+    setNumObra('')
     fetch(`/api/contacto?proyecto_id=${p.id}`)
       .then(r => r.json())
       .then(data => {
@@ -390,6 +408,8 @@ export default function Home() {
     setFechaMinuta(new Date().toISOString().split('T')[0])
   setGuardadoOdoo(false)
   setLotes([])
+  setNumObra('')
+  setBuscandoLotes(false)
   setDetectadoPor('')
   setDepartamentoNC('')
   setItemsNC([{ id: Date.now(), lote: null, busquedaLote: '', mostrarLotes: false, indiceLote: -1, defecto: '', causa: '', cantidad: '1', observaciones: '' }])
@@ -551,6 +571,37 @@ export default function Home() {
 
             {tipo === 'nc' && proyectoSeleccionado && (
               <>
+                {/* Número de obra manual si no hay lotes */}
+                {lotes.length === 0 && (
+                  <div className={styles.card}>
+                    <p className={styles.sectionLabel}>Número de obra</p>
+                    <p style={{ fontSize: 12, color: '#aaa', marginBottom: 8 }}>
+                      No encontramos piezas automáticamente. Ingresá el número de obra para buscarlas.
+                    </p>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <input
+                        className={styles.searchInput}
+                        style={{ flex: 1 }}
+                        placeholder="Ej: 5237"
+                        value={numObra}
+                        onChange={(e) => setNumObra(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === 'Enter') buscarLotesPorNumero(numObra) }}
+                      />
+                      <button
+                        className={styles.ncAgregarBtn}
+                        style={{ border: '1px solid #c8a96e', borderRadius: 8, padding: '0 16px', whiteSpace: 'nowrap' }}
+                        onClick={() => buscarLotesPorNumero(numObra)}
+                        disabled={buscandoLotes}
+                      >
+                        {buscandoLotes ? 'Buscando...' : 'Buscar piezas'}
+                      </button>
+                    </div>
+                    {numObra && lotes.length === 0 && !buscandoLotes && (
+                      <p style={{ fontSize: 12, color: '#c0392b', marginTop: 6 }}>Sin resultados para "{numObra}"</p>
+                    )}
+                  </div>
+                )}
+
                 {/* Tabla de piezas */}
                 <div className={styles.card}>
                   <p className={styles.sectionLabel}>Piezas afectadas</p>
