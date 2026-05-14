@@ -251,6 +251,95 @@ export default function Home() {
   }
 
 
+  const descargarPDF = async () => {
+    try {
+      if (!window.jspdf) {
+        await new Promise((resolve, reject) => {
+          const script = document.createElement('script')
+          script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'
+          script.onload = resolve
+          script.onerror = reject
+          document.head.appendChild(script)
+        })
+      }
+      const { jsPDF } = window.jspdf
+      const doc = new jsPDF({ unit: 'mm', format: 'a4' })
+      const pageW = doc.internal.pageSize.getWidth()
+      const pageH = doc.internal.pageSize.getHeight()
+      const margin = 20
+
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(18)
+      doc.setTextColor(200, 169, 110)
+      doc.text('MSH', margin, 18)
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(8)
+      doc.setTextColor(150, 150, 150)
+      doc.text('Shaping the future of Metal', margin + 18, 18)
+      doc.setDrawColor(200, 169, 110)
+      doc.setLineWidth(0.5)
+      doc.line(margin, 22, pageW - margin, 22)
+
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(13)
+      doc.setTextColor(20, 20, 20)
+      doc.text(result.tipo === 'minuta' ? 'MINUTA DE REUNIÓN DE OBRA' : 'NO CONFORMIDAD — REPORTE', margin, 31)
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(10)
+      doc.setTextColor(100, 100, 100)
+      doc.text(result.obra || result.proyecto || '', margin, 38)
+      doc.text(result.fecha || new Date().toLocaleDateString('es-AR'), pageW - margin, 38, { align: 'right' })
+
+      let y = 47
+      const addSeccion = (tituloSec, items) => {
+        if (!items || (Array.isArray(items) && items.length === 0)) return
+        if (y > pageH - 30) { doc.addPage(); y = 20 }
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(200, 169, 110)
+        doc.text(tituloSec.toUpperCase(), margin, y); y += 5
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(40, 40, 40)
+        const lista = Array.isArray(items) ? items : [items]
+        for (const item of lista) {
+          if (!item) continue
+          const lineas = doc.splitTextToSize('• ' + item, pageW - margin * 2)
+          for (const linea of lineas) {
+            if (y > pageH - 30) { doc.addPage(); y = 20 }
+            doc.text(linea, margin, y); y += 5
+          }
+        }
+        y += 3
+      }
+
+      if (result.tipo === 'minuta') {
+        addSeccion('Lugar', [result.lugar])
+        addSeccion('Asistentes', result.asistentes)
+        addSeccion('Temas tratados', result.temas)
+        addSeccion('Acuerdos y decisiones', result.acuerdos)
+        addSeccion('Pendientes', result.pendientes)
+        addSeccion('Próxima visita', [result.proxima_visita])
+      } else {
+        addSeccion('Producto', [result.producto])
+        addSeccion('Sector origen', [result.sector])
+        addSeccion('Causa', [result.causa])
+        addSeccion('Descripción', [result.descripcion])
+        addSeccion('Piezas afectadas', [result.piezas_cantidad])
+        addSeccion('Contramedidas', result.contramedidas)
+        addSeccion('Costo estimado', [result.costo_estimado])
+      }
+
+      doc.setDrawColor(200, 169, 110)
+      doc.line(margin, pageH - 15, pageW - margin, pageH - 15)
+      doc.setFontSize(7); doc.setTextColor(150, 150, 150)
+      doc.text('MSH. Shaping the future of Metal  |  +5411 5263 0413  |  info@grupomsh.com.ar  |  www.grupomsh.com.ar', pageW / 2, pageH - 9, { align: 'center' })
+
+      const obraSlug = (result.obra || result.proyecto || 'msh').replace(/[^a-z0-9]/gi, '_')
+      const fechaSlug = (result.fecha || '').replace(/\//g, '-')
+      doc.save(`${result.tipo === 'minuta' ? 'minuta' : 'nc'}_${obraSlug}_${fechaSlug}.pdf`)
+    } catch (err) {
+      console.error('Error descargando PDF:', err)
+      alert('Error al generar el PDF')
+    }
+  }
+
   const guardarEnOdoo = async () => {
     if (!result || !result.proyecto_id) return
     setGuardandoOdoo(true)
@@ -1037,6 +1126,18 @@ export default function Home() {
                     <p>{result.tipo === 'minuta' ? 'Borrador copiado — pegalo en tu mail y revisalo antes de enviar' : 'Reporte copiado — envialo al responsable'}</p>
                   </div>
                 )}
+                <button
+                  className={styles.copyBtn}
+                  onClick={descargarPDF}
+                  style={{ width: '100%', marginTop: 4 }}
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                    <polyline points="7 10 12 15 17 10"/>
+                    <line x1="12" y1="15" x2="12" y2="3"/>
+                  </svg>
+                  Descargar PDF
+                </button>
                 {result.proyecto_id && (
                   <button
                     className={styles.copyBtn}
