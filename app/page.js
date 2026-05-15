@@ -241,6 +241,28 @@ export default function Home() {
     const destinatarios = result.tipo === 'nc' && result.resolucion?.includes('refabricación')
       ? [emailComercial, ...NC_REFAB_EMAILS].filter(Boolean).join(',')
       : [emailCliente, emailComercial, ENRIQUE_EMAIL].filter(Boolean).join(',')
+
+    // Si hay fotos en NC, descargarlas antes de abrir el mail
+    if (result.tipo === 'nc') {
+      const todasLasImagenes = itemsNC.flatMap((item, rowIdx) =>
+        (item.imagenes || []).map((img, imgIdx) => ({
+          base64: img.base64,
+          nombre: `NC_${item.lote?.nombre?.replace(/[^a-z0-9]/gi, '_') || 'pieza' + (rowIdx + 1)}_foto${imgIdx + 1}.jpg`
+        }))
+      )
+      if (todasLasImagenes.length > 0) {
+        todasLasImagenes.forEach(img => {
+          const link = document.createElement('a')
+          link.href = `data:image/jpeg;base64,${img.base64}`
+          link.download = img.nombre
+          document.body.appendChild(link)
+          link.click()
+          document.body.removeChild(link)
+        })
+        alert(`Se descargaron ${todasLasImagenes.length} foto${todasLasImagenes.length > 1 ? 's' : ''} — adjuntalas al mail antes de enviar.`)
+      }
+    }
+
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
     if (isIOS) {
       const mailtoUrl = `mailto:${destinatarios}?subject=${encodeURIComponent(asunto)}&body=${encodeURIComponent(cuerpo)}`
