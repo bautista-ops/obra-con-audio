@@ -19,8 +19,7 @@ export default function Login() {
         body: JSON.stringify({ password })
       })
       if (res.ok) {
-        router.push('/')
-        router.refresh()
+        window.location.href = '/'
       } else {
         setError('Contraseña incorrecta')
       }
