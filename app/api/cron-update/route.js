@@ -26,11 +26,10 @@ async function odooAuth() {
 }
 
 export async function GET(request) {
-  // Auth temporalmente desactivada para debug — reactivar después
-  // const authHeader = request.headers.get('authorization')
-  // if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-  //   return Response.json({ error: 'No autorizado' }, { status: 401 })
-  // }
+  const authHeader = request.headers.get('authorization')
+  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    return Response.json({ error: 'No autorizado' }, { status: 401 })
+  }
 
   try {
     const uid = await odooAuth()
