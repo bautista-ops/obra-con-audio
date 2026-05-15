@@ -1,91 +1,113 @@
 export const maxDuration = 60
 
-async function getGoogleAccessToken() {
-  const credentials = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON)
+const DB = 'grupomsh-main-16859458'
 
-  const now = Math.floor(Date.now() / 1000)
-  const payload = {
-    iss: credentials.client_email,
-    scope: 'https://www.googleapis.com/auth/drive.readonly',
-    aud: 'https://oauth2.googleapis.com/token',
-    exp: now + 3600,
-    iat: now,
-  }
-
-  // Crear JWT manualmente
-  const header = btoa(JSON.stringify({ alg: 'RS256', typ: 'JWT' })).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_')
-  const body = btoa(JSON.stringify(payload)).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_')
-  const unsigned = `${header}.${body}`
-
-  // Importar la clave privada y firmar
-  const privateKey = credentials.private_key
-  const keyData = privateKey
-    .replace('-----BEGIN PRIVATE KEY-----', '')
-    .replace('-----END PRIVATE KEY-----', '')
-    .replace(/\n/g, '')
-  const binaryKey = Uint8Array.from(atob(keyData), c => c.charCodeAt(0))
-
-  const cryptoKey = await crypto.subtle.importKey(
-    'pkcs8',
-    binaryKey.buffer,
-    { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
-    false,
-    ['sign']
-  )
-
-  const encoder = new TextEncoder()
-  const signature = await crypto.subtle.sign('RSASSA-PKCS1-v1_5', cryptoKey, encoder.encode(unsigned))
-  const sig = btoa(String.fromCharCode(...new Uint8Array(signature))).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_')
-
-  const jwt = `${unsigned}.${sig}`
-
-  // Intercambiar JWT por access token
-  const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+async function odooAuth() {
+  const url = process.env.ODOO_URL
+  const user = process.env.ODOO_USER
+  const apiKey = process.env.ODOO_API_KEY
+  const res = await fetch(`${url}/xmlrpc/2/common`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${jwt}`
+    headers: { 'Content-Type': 'text/xml' },
+    body: `<?xml version="1.0"?>
+<methodCall>
+  <methodName>authenticate</methodName>
+  <params>
+    <param><value><string>${DB}</string></value></param>
+    <param><value><string>${user}</string></value></param>
+    <param><value><string>${apiKey}</string></value></param>
+    <param><value><struct></struct></value></param>
+  </params>
+</methodCall>`
   })
-
-  const tokenData = await tokenRes.json()
-  return tokenData.access_token
+  const text = await res.text()
+  const match = text.match(/<int>(\d+)<\/int>/)
+  return match ? parseInt(match[1]) : null
 }
 
 export async function GET(request) {
-  // Verificar que viene de Vercel Cron
-  // Auth temporalmente desactivada para debug
+  // Auth temporalmente desactivada para debug — reactivar después
+  // const authHeader = request.headers.get('authorization')
+  // if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  //   return Response.json({ error: 'No autorizado' }, { status: 401 })
+  // }
 
   try {
-    const accessToken = await getGoogleAccessToken()
-    const DRIVE_FILE_ID = '1dVtf30uD0J5wKr9lT2IHKCKXb68WaBn1'
+    const uid = await odooAuth()
+    if (!uid) return Response.json({ error: 'Auth ODOO fallida' }, { status: 500 })
 
-    const driveRes = await fetch(
-      `https://www.googleapis.com/drive/v3/files/${DRIVE_FILE_ID}/export?mimeType=text/csv`,
-      { headers: { Authorization: `Bearer ${accessToken}` } }
-    )
+    // Traer proyectos cotizados y ganados del CRM
+    const res = await fetch(`${process.env.ODOO_URL}/xmlrpc/2/object`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/xml' },
+      body: `<?xml version="1.0"?>
+<methodCall>
+  <methodName>execute_kw</methodName>
+  <params>
+    <param><value><string>${DB}</string></value></param>
+    <param><value><int>${uid}</int></value></param>
+    <param><value><string>${process.env.ODOO_API_KEY}</string></value></param>
+    <param><value><string>crm.lead</string></value></param>
+    <param><value><string>search_read</string></value></param>
+    <param><value><array><data>
+      <value><array><data></data></array></value>
+    </data></array></value></param>
+    <param><value><struct>
+      <member><name>fields</name>
+        <value><array><data>
+          <value><string>id</string></value>
+          <value><string>name</string></value>
+          <value><string>stage_id</string></value>
+          <value><string>user_id</string></value>
+          <value><string>partner_id</string></value>
+        </data></array></value>
+      </member>
+      <member><name>limit</name><value><int>500</int></value></member>
+    </struct></value></param>
+  </params>
+</methodCall>`
+    })
 
-    if (!driveRes.ok) {
-      const err = await driveRes.text()
-      return Response.json({ error: 'No se pudo leer el Drive', detalle: err }, { status: 500 })
+    const xml = await res.text()
+
+    // Parsear proyectos
+    const proyectos = []
+    const blocks = xml.match(/<value>\s*<struct>([\s\S]*?)<\/struct>\s*<\/value>/g) || []
+
+    for (const block of blocks) {
+      const idM = block.match(/<name>id<\/name>\s*<value><int>(\d+)<\/int>/)
+      const nameM = block.match(/<name>name<\/name>\s*<value><string>([^<]+)<\/string>/)
+      const stageM = block.match(/<name>stage_id<\/name>[\s\S]*?<string>([^<]+)<\/string>/)
+      const userM = block.match(/<name>user_id<\/name>[\s\S]*?<string>([^<]+)<\/string>/)
+      const partnerM = block.match(/<name>partner_id<\/name>[\s\S]*?<string>([^<]+)<\/string>/)
+
+      if (!idM || !nameM) continue
+
+      const etapa = (stageM ? stageM[1] : '').toLowerCase()
+      if (!etapa.includes('won') && !etapa.includes('ganado') &&
+          !etapa.includes('cotiz') && !etapa.includes('cotizado')) continue
+
+      proyectos.push({
+        id: parseInt(idM[1]),
+        nombre: nameM[1].trim(),
+        etapa: stageM ? stageM[1] : '',
+        comercial: userM ? userM[1] : '',
+        cliente: partnerM ? partnerM[1] : '',
+      })
     }
 
-    const csv = await driveRes.text()
-    const lineas = csv.split('\n').filter(l => l.trim())
+    // Generar texto del system prompt para obras
+    const listaObras = proyectos
+      .map(p => `- [ID:${p.id}] ${p.nombre} | ${p.etapa} | Comercial: ${p.comercial}`)
+      .join('\n')
 
-    const obras = []
-    for (let i = 1; i < lineas.length && i < 200; i++) {
-      const cols = lineas[i].split(',').map(c => c.replace(/^"|"$/g, '').trim())
-      if (cols[0] && cols[0].match(/\d{4}/)) {
-        obras.push(cols.slice(0, 6).join(' | '))
-      }
-    }
-
-    console.log(`[CRON] Update exitoso — ${obras.length} obras leídas del Drive`)
+    console.log(`[CRON] Update exitoso — ${proyectos.length} proyectos activos desde ODOO`)
 
     return Response.json({
       ok: true,
-      obras_encontradas: obras.length,
-      muestra: obras.slice(0, 5),
-      fecha: new Date().toISOString()
+      proyectos_encontrados: proyectos.length,
+      muestra: proyectos.slice(0, 5),
+      fecha: new Date().toISOString(),
     })
 
   } catch (error) {
