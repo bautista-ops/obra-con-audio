@@ -39,7 +39,7 @@ export default function Home() {
   const [buscandoLotes, setBuscandoLotes] = useState(false)
   const [detectadoPor, setDetectadoPor] = useState('')
   const [departamentoNC, setDepartamentoNC] = useState('')
-  const itemVacio = () => ({ id: Date.now(), lote: null, busquedaLote: '', mostrarLotes: false, indiceLote: -1, defecto: '', causa: '', cantidad: '1', observaciones: '' })
+  const itemVacio = () => ({ id: Date.now(), lote: null, busquedaLote: '', mostrarLotes: false, indiceLote: -1, defecto: '', causa: '', cantidad: '1', observaciones: '', imagenes: [] })
   const [itemsNC, setItemsNC] = useState([itemVacio()])
   const mediaRecorderRef = useRef(null)
   const audioChunksRef = useRef([])
@@ -193,6 +193,7 @@ export default function Home() {
                 causa: i.causa,
                 cantidad: i.cantidad,
                 observaciones: i.observaciones,
+                imagenes: i.imagenes || [],
               })),
               detectadoPor,
               departamento: departamentoNC,
@@ -250,6 +251,27 @@ export default function Home() {
     }
   }
 
+
+  const comprimirImagen = (file) => new Promise((resolve) => {
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      const img = new window.Image()
+      img.onload = () => {
+        const canvas = document.createElement('canvas')
+        const MAX = 1200
+        let w = img.width, h = img.height
+        if (w > MAX) { h = Math.round(h * MAX / w); w = MAX }
+        if (h > MAX) { w = Math.round(w * MAX / h); h = MAX }
+        canvas.width = w
+        canvas.height = h
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h)
+        const base64 = canvas.toDataURL('image/jpeg', 0.7).split(',')[1]
+        resolve({ base64, nombre: file.name, tipo: 'image/jpeg' })
+      }
+      img.src = e.target.result
+    }
+    reader.readAsDataURL(file)
+  })
 
   const descargarPDF = async () => {
     try {
@@ -451,6 +473,7 @@ export default function Home() {
           obra: result.obra || result.proyecto,
           pdf_base64: pdfBase64,
           pdf_nombre: nombreArchivo,
+          ncData: result.tipo === 'nc' ? { items: itemsNC.filter(i => i.lote).map(i => ({ lote: i.lote?.nombre, imagenes: i.imagenes || [] })) } : null,
         })
       })
 
@@ -797,6 +820,36 @@ export default function Home() {
                             <p className={styles.ncFieldLabel}>Observaciones</p>
                             <input className={styles.ncSelect} placeholder="Opcional..." value={item.observaciones}
                               onChange={(e) => setItemsNC(prev => prev.map((it, i) => i === rowIdx ? {...it, observaciones: e.target.value} : it))} />
+                          </div>
+                        </div>
+
+                        {/* Adjuntar fotos */}
+                        <div>
+                          <p className={styles.ncFieldLabel}>Fotos</p>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                            <label className={styles.ncAgregarBtn} style={{ cursor: 'pointer', margin: 0 }}>
+                              📎 {item.imagenes.length > 0 ? `${item.imagenes.length} foto${item.imagenes.length > 1 ? 's' : ''} adjunta${item.imagenes.length > 1 ? 's' : ''}` : 'Adjuntar foto'}
+                              <input
+                                type="file"
+                                accept="image/*"
+                                multiple
+                                style={{ display: 'none' }}
+                                onChange={async (e) => {
+                                  const archivos = Array.from(e.target.files)
+                                  const comprimidas = await Promise.all(archivos.map(comprimirImagen))
+                                  setItemsNC(prev => prev.map((it, i) => i === rowIdx ? {...it, imagenes: [...it.imagenes, ...comprimidas]} : it))
+                                  e.target.value = ''
+                                }}
+                              />
+                            </label>
+                            {item.imagenes.length > 0 && (
+                              <button
+                                className={styles.ncEliminarBtn}
+                                onClick={() => setItemsNC(prev => prev.map((it, i) => i === rowIdx ? {...it, imagenes: []} : it))}
+                              >
+                                ✕ Quitar fotos
+                              </button>
+                            )}
                           </div>
                         </div>
                       </div>

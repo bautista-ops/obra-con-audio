@@ -27,7 +27,7 @@ async function odooAuth() {
 
 export async function POST(request) {
   try {
-    const { proyecto_id, tipo, fecha, obra, pdf_base64, pdf_nombre } = await request.json()
+    const { proyecto_id, tipo, fecha, obra, pdf_base64, pdf_nombre, ncData } = await request.json()
 
     if (!proyecto_id || !pdf_base64) {
       return Response.json({ error: 'Faltan datos requeridos' }, { status: 400 })
@@ -167,11 +167,51 @@ export async function POST(request) {
     const notaXml = await notaRes.text()
     const msgIdM = notaXml.match(/<int>(\d+)<\/int>/)
 
+    // Subir imágenes de piezas como adjuntos adicionales
+    let imagenesSubidas = 0
+    if (ncData?.items) {
+      for (const item of ncData.items) {
+        if (!item.imagenes || item.imagenes.length === 0) continue
+        for (let idx = 0; idx < item.imagenes.length; idx++) {
+          const img = item.imagenes[idx]
+          const nombreImg = `NC_${item.lote?.replace(/[^a-z0-9]/gi, '_') || 'pieza'}_foto${idx + 1}.jpg`
+          await fetch(`${url}/xmlrpc/2/object`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/xml' },
+            body: `<?xml version="1.0"?>
+<methodCall>
+  <methodName>execute_kw</methodName>
+  <params>
+    <param><value><string>${DB}</string></value></param>
+    <param><value><int>${uid}</int></value></param>
+    <param><value><string>${apiKey}</string></value></param>
+    <param><value><string>ir.attachment</string></value></param>
+    <param><value><string>create</string></value></param>
+    <param><value><array><data>
+      <value><struct>
+        <member><name>name</name><value><string>${nombreImg}</string></value></member>
+        <member><name>type</name><value><string>binary</string></value></member>
+        <member><name>datas</name><value><string>${img.base64}</string></value></member>
+        <member><name>mimetype</name><value><string>image/jpeg</string></value></member>
+        <member><name>res_model</name><value><string>crm.lead</string></value></member>
+        <member><name>res_id</name><value><int>${proyecto_id}</int></value></member>
+      </struct>
+    </value></data></array></value></param>
+    <param><value><struct></struct></value></param>
+  </params>
+</methodCall>`
+          })
+          imagenesSubidas++
+        }
+      }
+    }
+
     return Response.json({
       ok: true,
       adjunto_id: adjuntoId,
       msg_id: msgIdM ? parseInt(msgIdM[1]) : null,
       notificados: partnerIds.length,
+      imagenes_subidas: imagenesSubidas,
     })
 
   } catch (error) {
