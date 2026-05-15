@@ -223,9 +223,10 @@ export async function POST(request) {
       ? `Resolución: ${resolucion === 'refab' ? 'Requiere refabricación' : 'Se resuelve en obra'}`
       : ''
 
+    const fechaActual = new Date().toLocaleDateString('es-AR')
     const proyectosLista = proyectosCtx.length > 0
-      ? `\nProyectos activos en ODOO:\n${proyectosCtx.map(p => `- [ID:${p.id}] ${p.nombre}${p.cliente ? ` | ${p.cliente}` : ''}${p.comercial ? ` | Comercial: ${p.comercial}` : ''}`).join('\n')}`
-      : ''
+      ? `\n## PROYECTOS ACTIVOS EN ODOO (${fechaActual} — ${proyectosCtx.length} proyectos)\n${proyectosCtx.map(p => `- [ID:${p.id}] ${p.nombre}${p.cliente ? ` | Cliente: ${p.cliente}` : ''}${p.comercial ? ` | Comercial: ${p.comercial}` : ''} | ${p.etapa}`).join('\n')}`
+      : '\n## PROYECTOS ODOO: No disponibles — usar conocimiento base'
 
     const jsonInstruccion = tipo === 'minuta' ? `
 Respondé ÚNICAMENTE con un JSON válido, sin texto adicional ni backticks. Estructura exacta:
