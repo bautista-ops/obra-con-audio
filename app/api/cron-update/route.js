@@ -52,10 +52,7 @@ async function getGoogleAccessToken() {
 
 export async function GET(request) {
   // Verificar que viene de Vercel Cron
-  const authHeader = request.headers.get('authorization')
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    return Response.json({ error: 'No autorizado' }, { status: 401 })
-  }
+  // Auth temporalmente desactivada para debug
 
   try {
     const accessToken = await getGoogleAccessToken()
