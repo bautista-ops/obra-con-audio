@@ -70,6 +70,13 @@ export default function Home() {
     }
   }
 
+  const recargarProyectos = () => {
+    fetch('/api/proyectos')
+      .then(r => r.json())
+      .then(data => { if (data.proyectos) setProyectos(data.proyectos) })
+      .catch(e => console.error('Error recargando proyectos:', e))
+  }
+
   const seleccionarProyecto = (p) => {
     setProyectoSeleccionado(p)
     setBusqueda(p.nombre)
@@ -634,7 +641,7 @@ export default function Home() {
                       placeholder="Buscá por nombre, cliente o comercial..."
                       value={busqueda}
                       onChange={(e) => { setBusqueda(e.target.value); setMostrarResultados(true); setIndiceProyecto(-1); }}
-                      onFocus={() => setMostrarResultados(true)}
+                      onFocus={() => { setMostrarResultados(true); recargarProyectos() }}
                       onBlur={() => setTimeout(() => setMostrarResultados(false), 150)}
                       onKeyDown={(e) => {
                         const palabras = busqueda.toLowerCase().split(/s+/).filter(Boolean)
