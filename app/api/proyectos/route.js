@@ -91,7 +91,7 @@ export async function GET() {
         </data></array></value>
       </member>
       <member><name>limit</name>
-        <value><int>200</int></value>
+        <value><int>500</int></value>
       </member>
     </struct></value></param>
   </params>
