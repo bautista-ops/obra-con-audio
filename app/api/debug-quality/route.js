@@ -74,3 +74,63 @@ export async function GET() {
     return Response.json({ error: e.message }, { status: 500 })
   }
 }
+
+export async function POST() {
+  // Ver opciones de quality.reason
+  try {
+    const url = process.env.ODOO_URL
+    const user = process.env.ODOO_USER
+    const apiKey = process.env.ODOO_API_KEY
+
+    const uidRes = await fetch(`${url}/xmlrpc/2/common`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/xml' },
+      body: `<?xml version="1.0"?>
+<methodCall>
+  <methodName>authenticate</methodName>
+  <params>
+    <param><value><string>grupomsh-main-16859458</string></value></param>
+    <param><value><string>${user}</string></value></param>
+    <param><value><string>${apiKey}</string></value></param>
+    <param><value><struct></struct></value></param>
+  </params>
+</methodCall>`
+    })
+    const uid = parseInt((await uidRes.text()).match(/<int>(\d+)<\/int>/)?.[1])
+
+    const res = await fetch(`${url}/xmlrpc/2/object`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/xml' },
+      body: `<?xml version="1.0"?>
+<methodCall>
+  <methodName>execute_kw</methodName>
+  <params>
+    <param><value><string>grupomsh-main-16859458</string></value></param>
+    <param><value><int>${uid}</int></value></param>
+    <param><value><string>${apiKey}</string></value></param>
+    <param><value><string>quality.reason</string></value></param>
+    <param><value><string>search_read</string></value></param>
+    <param><value><array><data><value><array><data></data></array></value></data></array></value></param>
+    <param><value><struct>
+      <member><name>fields</name><value><array><data>
+        <value><string>id</string></value>
+        <value><string>name</string></value>
+      </data></array></value></member>
+      <member><name>limit</name><value><int>50</int></value></member>
+    </struct></value></param>
+  </params>
+</methodCall>`
+    })
+    const xml = await res.text()
+    const razones = []
+    const blocks = xml.match(/<struct>[\s\S]*?<\/struct>/g) || []
+    for (const b of blocks) {
+      const idM = b.match(/<name>id<\/name>\s*<value><int>(\d+)<\/int>/)
+      const nameM = b.match(/<name>name<\/name>\s*<value><string>([^<]+)<\/string>/)
+      if (idM && nameM) razones.push({ id: parseInt(idM[1]), nombre: nameM[1] })
+    }
+    return Response.json({ razones })
+  } catch (e) {
+    return Response.json({ error: e.message }, { status: 500 })
+  }
+}
