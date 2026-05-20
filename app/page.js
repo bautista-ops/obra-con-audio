@@ -254,7 +254,7 @@ export default function Home() {
     // Si hay fotos en NC, descargarlas antes de abrir el mail
     if (result.tipo === 'nc') {
       const todasLasImagenes = itemsNC.flatMap((item, rowIdx) =>
-        (item.imagenes || []).map((img, imgIdx) => ({
+        ((item.imagenes || [])).map((img, imgIdx) => ({
           base64: img.base64,
           nombre: `NC_${item.lote?.nombre?.replace(/[^a-z0-9]/gi, '_') || 'pieza' + (rowIdx + 1)}_foto${imgIdx + 1}.jpg`
         }))
@@ -878,7 +878,7 @@ export default function Home() {
                           <p className={styles.ncFieldLabel}>Fotos</p>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                             <label className={styles.ncAgregarBtn} style={{ cursor: 'pointer', margin: 0 }}>
-                              📎 {item.imagenes.length > 0 ? `${item.imagenes.length} foto${item.imagenes.length > 1 ? 's' : ''} adjunta${item.imagenes.length > 1 ? 's' : ''}` : 'Adjuntar foto'}
+                              📎 {((item.imagenes || [])).length > 0 ? `${((item.imagenes || [])).length} foto${((item.imagenes || [])).length > 1 ? 's' : ''} adjunta${((item.imagenes || [])).length > 1 ? 's' : ''}` : 'Adjuntar foto'}
                               <input
                                 type="file"
                                 accept="image/*"
@@ -887,12 +887,12 @@ export default function Home() {
                                 onChange={async (e) => {
                                   const archivos = Array.from(e.target.files)
                                   const comprimidas = await Promise.all(archivos.map(comprimirImagen))
-                                  setItemsNC(prev => prev.map((it, i) => i === rowIdx ? {...it, imagenes: [...it.imagenes, ...comprimidas]} : it))
+                                  setItemsNC(prev => prev.map((it, i) => i === rowIdx ? {...it, imagenes: [...(it.imagenes || []), ...comprimidas]} : it))
                                   e.target.value = ''
                                 }}
                               />
                             </label>
-                            {item.imagenes.length > 0 && (
+                            {((item.imagenes || [])).length > 0 && (
                               <button
                                 className={styles.ncEliminarBtn}
                                 onClick={() => setItemsNC(prev => prev.map((it, i) => i === rowIdx ? {...it, imagenes: []} : it))}
