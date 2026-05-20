@@ -2,6 +2,19 @@ export const maxDuration = 60
 
 const DB = 'grupomsh-main-16859458'
 
+// Mapeo causas agente → quality.reason IDs en ODOO
+const CAUSA_MAP = {
+  'Planos / Doc.': 5,
+  'Fabricación': 6,
+  'Máquina': 1,
+  'Proveedor': 7,
+  'Comunicación': 8,
+  'Logística': 9,
+  'Otra': 4,
+}
+
+const PRIORIDAD_MAP = { 'Alta': '3', 'Media': '2', 'Baja': '1' }
+
 async function odooAuth() {
   const url = process.env.ODOO_URL
   const user = process.env.ODOO_USER
@@ -70,7 +83,6 @@ export async function POST(request) {
     const uid = await odooAuth()
     if (!uid) return Response.json({ error: 'Auth ODOO fallida' }, { status: 401 })
 
-    // Determinar destinos
     const guardarCRM = !destino || destino === 'crm' || destino === 'ambos'
     const guardarCalidad = !destino || destino === 'calidad' || destino === 'ambos'
 
@@ -79,10 +91,8 @@ export async function POST(request) {
 
     // ── CRM ──────────────────────────────────────────────
     if (guardarCRM) {
-      // PDF al CRM
       adjuntoId = await crearAdjunto(url, apiKey, uid, pdf_nombre, pdf_base64, 'application/pdf', 'crm.lead', proyecto_id)
 
-      // Buscar partners para notificar
       const partnerRes = await fetch(`${url}/xmlrpc/2/object`, {
         method: 'POST',
         headers: { 'Content-Type': 'text/xml' },
@@ -108,9 +118,7 @@ export async function POST(request) {
       </data></array></value>
     </data></array></value></param>
     <param><value><struct>
-      <member><name>fields</name><value><array><data>
-        <value><string>id</string></value>
-      </data></array></value></member>
+      <member><name>fields</name><value><array><data><value><string>id</string></value></data></array></value></member>
       <member><name>limit</name><value><int>5</int></value></member>
     </struct></value></param>
   </params>
@@ -126,7 +134,6 @@ export async function POST(request) {
         ? `<member><name>partner_ids</name><value><array><data>${partnerIdsXml}</data></array></value></member>`
         : ''
 
-      // Nota en chatter
       const tipoLabel = tipo === 'minuta' ? '📋 Minuta de reunión' : '⚠️ No Conformidad'
       const cuerpoNota = `${tipoLabel} — ${fecha || new Date().toLocaleDateString('es-AR')}&lt;br/&gt;Obra: ${obra || 'Sin especificar'}&lt;br/&gt;&lt;br/&gt;Registrada desde MSH Asistente de Obra. Ver PDF adjunto.`
       const attachXml = adjuntoId ? `<member><name>attachment_ids</name><value><array><data><value><array><data><value><int>4</int></value><value><int>0</int></value><value><int>${adjuntoId}</int></value></data></array></value></data></array></value></member>` : ''
@@ -207,30 +214,30 @@ export async function POST(request) {
       const ericIdM = ericXml.match(/<name>id<\/name>\s*<value><int>(\d+)<\/int>/)
       const ericUserId = ericIdM ? parseInt(ericIdM[1]) : null
 
-      const prioridadMap = { 'Alta': '2', 'Media': '1', 'Baja': '0' }
-      const prioridad = prioridadMap[ncData.gravedad] || '0'
+      const prioridad = PRIORIDAD_MAP[ncData.urgencia] || PRIORIDAD_MAP[ncData.gravedad] || '0'
       const detectadoPorStr = ncData.detectadoPor
         ? `${ncData.detectadoPor}${ncData.departamento ? ` (${ncData.departamento})` : ''}`
         : ncData.departamento || 'A confirmar'
 
       for (const item of ncData.items) {
         const titulo = `NC - ${ncData.proyecto || obra || 'Sin especificar'} - ${item.lote || 'Pieza'} - ${item.defecto || 'Defecto'}`
-        const descripcion = [
-          `Lote/Pieza: ${item.lote || 'Sin especificar'}`,
-          `Producto: ${item.producto || ''}`,
-          `Defecto: ${item.defecto || 'A relevar'}`,
-          `Causa: ${item.causa || 'A relevar'}`,
-          `Cantidad: ${item.cantidad || 1}`,
-          item.observaciones ? `Observaciones: ${item.observaciones}` : '',
-          '',
-          `Detectado por: ${detectadoPorStr}`,
-          `Resolución: ${ncData.resolucion || 'A definir'}`,
-          `Gravedad: ${ncData.gravedad || 'A definir'}`,
-          `Urgencia: ${ncData.urgencia || 'A definir'}`,
-        ].filter(Boolean).join('\n')
 
-        const desc = descripcion
-          .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '&#10;')
+        const descHtml = [
+          `<p><strong>Lote/Pieza:</strong> ${item.lote || 'Sin especificar'}</p>`,
+          item.producto ? `<p><strong>Producto:</strong> ${item.producto}</p>` : '',
+          `<p><strong>Defecto:</strong> ${item.defecto || 'A relevar'}</p>`,
+          `<p><strong>Causa:</strong> ${item.causa || 'A relevar'}</p>`,
+          `<p><strong>Cantidad:</strong> ${item.cantidad || 1}</p>`,
+          item.observaciones ? `<p><strong>Observaciones:</strong> ${item.observaciones}</p>` : '',
+          `<hr/>`,
+          `<p><strong>Detectado por:</strong> ${detectadoPorStr}</p>`,
+          `<p><strong>Resolución:</strong> ${ncData.resolucion || 'A definir'}</p>`,
+          `<p><strong>Gravedad:</strong> ${ncData.gravedad || 'A definir'} | <strong>Urgencia:</strong> ${ncData.urgencia || 'A definir'}</p>`,
+        ].filter(Boolean).join('')
+
+        const reasonId = CAUSA_MAP[item.causa] || null
+        const reasonMember = reasonId ? `<member><name>reason_id</name><value><int>${reasonId}</int></value></member>` : ''
+        const ericMember = ericUserId ? `<member><name>user_id</name><value><int>${ericUserId}</int></value></member>` : ''
 
         const alertaRes = await fetch(`${url}/xmlrpc/2/object`, {
           method: 'POST',
@@ -246,10 +253,11 @@ export async function POST(request) {
     <param><value><string>create</string></value></param>
     <param><value><array><data>
       <value><struct>
-        <member><name>name</name><value><string>${titulo}</string></value></member>
-        <member><name>description</name><value><string>${desc}</string></value></member>
+        <member><name>title</name><value><string>${titulo}</string></value></member>
+        <member><name>description</name><value><string>${descHtml}</string></value></member>
         <member><name>priority</name><value><string>${prioridad}</string></value></member>
-        ${ericUserId ? `<member><name>user_id</name><value><int>${ericUserId}</int></value></member>` : ''}
+        ${reasonMember}
+        ${ericMember}
       </struct>
     </value></data></array></value></param>
     <param><value><struct></struct></value></param>
