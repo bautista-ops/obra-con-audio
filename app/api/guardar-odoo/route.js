@@ -59,7 +59,7 @@ async function crearAdjunto(url, apiKey, uid, nombre, base64, mimeType, resModel
 
 export async function POST(request) {
   try {
-    const { proyecto_id, tipo, fecha, obra, pdf_base64, pdf_nombre, ncData } = await request.json()
+    const { proyecto_id, tipo, fecha, obra, pdf_base64, pdf_nombre, ncData, destino } = await request.json()
 
     if (!proyecto_id || !pdf_base64) {
       return Response.json({ error: 'Faltan datos requeridos' }, { status: 400 })
@@ -71,9 +71,12 @@ export async function POST(request) {
     const uid = await odooAuth()
     if (!uid) return Response.json({ error: 'Auth ODOO fallida' }, { status: 401 })
 
-    // 1. PDF adjunto al CRM
-    const adjuntoId = await crearAdjunto(url, apiKey, uid, pdf_nombre, pdf_base64, 'application/pdf', 'crm.lead', proyecto_id)
-    if (!adjuntoId) return Response.json({ error: 'No se pudo crear el adjunto PDF' }, { status: 500 })
+    // 1. PDF adjunto al CRM (solo si destino es crm o ambos)
+    const guardarCRM = !destino || destino === "crm" || destino === "ambos"
+    let adjuntoId = null
+    if (guardarCRM) {
+      adjuntoId = await crearAdjunto(url, apiKey, uid, pdf_nombre, pdf_base64, 'application/pdf', 'crm.lead', proyecto_id)
+    }
 
     // 2. Buscar partner_ids de Joaquín y Eric para notificar
     const partnerRes = await fetch(`${url}/xmlrpc/2/object`, {
@@ -123,10 +126,12 @@ export async function POST(request) {
       ? `<member><name>partner_ids</name><value><array><data>${partnerIdsXml}</data></array></value></member>`
       : ''
 
-    // 3. Nota en chatter del CRM
+    // 3. Nota en chatter del CRM (solo si guardarCRM)
     const tipoLabel = tipo === 'minuta' ? '📋 Minuta de reunión' : '⚠️ No Conformidad'
     const cuerpoNota = `${tipoLabel} — ${fecha || new Date().toLocaleDateString('es-AR')}&lt;br/&gt;Obra: ${obra || 'Sin especificar'}&lt;br/&gt;&lt;br/&gt;Registrada desde MSH Asistente de Obra. Ver PDF adjunto.`
 
+    let msgIdM = null
+    if (guardarCRM) {
     const notaRes = await fetch(`${url}/xmlrpc/2/object`, {
       method: 'POST',
       headers: { 'Content-Type': 'text/xml' },
@@ -178,7 +183,8 @@ export async function POST(request) {
 
     // 5. Alertas de calidad — UNA POR PIEZA
     const alertaIds = []
-    if (tipo === 'nc' && ncData?.items?.length > 0) {
+    const guardarCalidad = !destino || destino === "calidad" || destino === "ambos"
+    if (tipo === 'nc' && ncData?.items?.length > 0 && guardarCalidad) {
 
       // Buscar user_id de Eric
       const ericRes = await fetch(`${url}/xmlrpc/2/object`, {

@@ -32,6 +32,7 @@ export default function Home() {
   const [gravedadNC, setGravedadNC] = useState('')
   const [urgenciaNC, setUrgenciaNC] = useState('')
   const [guardadoOdoo, setGuardadoOdoo] = useState(false)
+  const [destino, setDestino] = useState(null)
   const [indiceAsistente, setIndiceAsistente] = useState(-1)
   // Estados NC
   const [lotes, setLotes] = useState([])
@@ -391,8 +392,9 @@ export default function Home() {
     }
   }
 
-  const guardarEnOdoo = async () => {
+  const guardarEnOdoo = async (destinoElegido) => {
     if (!result || !result.proyecto_id) return
+    setDestino(destinoElegido)
     setGuardandoOdoo(true)
     try {
       // Cargar jsPDF desde CDN si no está disponible
@@ -502,6 +504,7 @@ export default function Home() {
           obra: result.obra || result.proyecto,
           pdf_base64: pdfBase64,
           pdf_nombre: nombreArchivo,
+          destino: destinoElegido,
           ncData: result.tipo === 'nc' ? {
             proyecto: result.proyecto || proyectoSeleccionado?.nombre || '',
             items: itemsNC.filter(i => i.lote).map(i => ({
@@ -534,6 +537,7 @@ export default function Home() {
     } finally {
       setGuardandoOdoo(false)
     setGuardadoOdoo(false)
+  setDestino(null)
   setGravedadNC('')
   setUrgenciaNC('')
     }
@@ -1236,20 +1240,41 @@ export default function Home() {
                   </svg>
                   Descargar PDF
                 </button>
-                {result.proyecto_id && (
-                  <button
-                    className={styles.copyBtn}
-                    onClick={guardarEnOdoo}
-                    disabled={guardandoOdoo || guardadoOdoo}
-                    style={{ width: '100%', marginTop: 4, opacity: guardadoOdoo ? 0.6 : 1 }}
-                  >
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                      <polyline points="17 8 12 3 7 8"/>
-                      <line x1="12" y1="3" x2="12" y2="15"/>
-                    </svg>
-                    {guardadoOdoo ? '✓ Guardado en ODOO' : guardandoOdoo ? 'Guardando...' : 'Guardar en ODOO'}
-                  </button>
+                {result.proyecto_id && !guardadoOdoo && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 4 }}>
+                    <p style={{ fontSize: 11, color: '#aaa', textTransform: 'uppercase', letterSpacing: 0.5, margin: 0 }}>Guardar en ODOO</p>
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      <button
+                        className={styles.copyBtn}
+                        onClick={() => guardarEnOdoo('calidad')}
+                        disabled={guardandoOdoo}
+                        style={{ flex: 1, opacity: guardandoOdoo && destino !== 'calidad' ? 0.4 : 1 }}
+                      >
+                        {guardandoOdoo && destino === 'calidad' ? 'Guardando...' : '🔍 Solo Calidad'}
+                      </button>
+                      <button
+                        className={styles.copyBtn}
+                        onClick={() => guardarEnOdoo('crm')}
+                        disabled={guardandoOdoo}
+                        style={{ flex: 1, opacity: guardandoOdoo && destino !== 'crm' ? 0.4 : 1 }}
+                      >
+                        {guardandoOdoo && destino === 'crm' ? 'Guardando...' : '📁 Solo CRM'}
+                      </button>
+                      <button
+                        className={styles.copyBtn}
+                        onClick={() => guardarEnOdoo('ambos')}
+                        disabled={guardandoOdoo}
+                        style={{ flex: 1, opacity: guardandoOdoo && destino !== 'ambos' ? 0.4 : 1 }}
+                      >
+                        {guardandoOdoo && destino === 'ambos' ? 'Guardando...' : '✓ Calidad + CRM'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+                {guardadoOdoo && (
+                  <p style={{ fontSize: 13, color: '#27ae60', textAlign: 'center', marginTop: 4 }}>
+                    ✓ Guardado en ODOO ({destino === 'calidad' ? 'Calidad' : destino === 'crm' ? 'CRM' : 'Calidad + CRM'})
+                  </p>
                 )}
               </>
             )}
