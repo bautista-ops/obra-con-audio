@@ -252,15 +252,15 @@ export async function POST(request) {
       const prioridad = prioridadMap[ncData.gravedad] || '0'
 
       // Armar descripción completa
-      const itemsDesc = (ncData.items || []).map(i =>
-        `Pieza: ${i.lote} | Defecto: ${i.defecto} | Causa: ${i.causa} | Cant: ${i.cantidad}${i.observaciones ? ' | Obs: ' + i.observaciones : ''}`
-      ).join('\n')
+      const itemsDesc = (ncData.items || []).map((i, idx) =>
+        `Pieza ${idx+1}: ${i.lote || 'Sin especificar'}\nProducto: ${i.producto || ''}\nDefecto: ${i.defecto || 'A relevar'}\nCausa: ${i.causa || 'A relevar'}\nCantidad: ${i.cantidad || 1}${i.observaciones ? '\nObservaciones: ' + i.observaciones : ''}`
+      ).join('\n\n')
 
-      const descripcion = `${itemsDesc}\n\nDetectado por: ${ncData.detectadoPor || ncData.departamento || 'A confirmar'}\nResolución: ${ncData.resolucion || 'A definir'}\nUrgencia: ${ncData.urgencia || 'A definir'}`
+      const descripcion = `${itemsDesc}\n\nDetectado por: ${ncData.detectadoPor ? ncData.detectadoPor + (ncData.departamento ? ' (' + ncData.departamento + ')' : '') : ncData.departamento || 'A confirmar'}\nResolución: ${ncData.resolucion || 'A definir'}\nGravedad: ${ncData.gravedad || 'A definir'}\nUrgencia: ${ncData.urgencia || 'A definir'}`
 
       // Título de la alerta
       const primerItem = (ncData.items || [])[0]
-      const tituloAlerta = `NC - ${primerItem?.lote || obra || 'Sin especificar'} - ${primerItem?.defecto || 'Defecto'}`
+      const tituloAlerta = `NC - ${ncData.proyecto || obra || 'Sin especificar'} - ${primerItem?.defecto || 'Defecto'}`
 
       const alertaBody = `<?xml version="1.0"?>
 <methodCall>
@@ -291,6 +291,42 @@ export async function POST(request) {
       const alertaXml = await alertaRes.text()
       const alertaIdM = alertaXml.match(/<int>(\d+)<\/int>/)
       alertaId = alertaIdM ? parseInt(alertaIdM[1]) : null
+
+      // Adjuntar fotos a la alerta de calidad
+      if (alertaId) {
+        for (const item of (ncData.items || [])) {
+          for (let idx = 0; idx < (item.imagenes || []).length; idx++) {
+            const img = item.imagenes[idx]
+            const nombreImg = `NC_${(item.lote || 'pieza').replace(/[^a-z0-9]/gi, '_')}_foto${idx+1}.jpg`
+            await fetch(`${url}/xmlrpc/2/object`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'text/xml' },
+              body: `<?xml version=1.0?>
+<methodCall>
+  <methodName>execute_kw</methodName>
+  <params>
+    <param><value><string>${DB}</string></value></param>
+    <param><value><int>${uid}</int></value></param>
+    <param><value><string>${apiKey}</string></value></param>
+    <param><value><string>ir.attachment</string></value></param>
+    <param><value><string>create</string></value></param>
+    <param><value><array><data>
+      <value><struct>
+        <member><name>name</name><value><string>${nombreImg}</string></value></member>
+        <member><name>type</name><value><string>binary</string></value></member>
+        <member><name>datas</name><value><string>${img.base64}</string></value></member>
+        <member><name>mimetype</name><value><string>image/jpeg</string></value></member>
+        <member><name>res_model</name><value><string>quality.alert</string></value></member>
+        <member><name>res_id</name><value><int>${alertaId}</int></value></member>
+      </struct>
+    </value></data></array></value></param>
+    <param><value><struct></struct></value></param>
+  </params>
+</methodCall>`
+            })
+          }
+        }
+      }
     }
 
     return Response.json({

@@ -502,7 +502,23 @@ export default function Home() {
           obra: result.obra || result.proyecto,
           pdf_base64: pdfBase64,
           pdf_nombre: nombreArchivo,
-          ncData: result.tipo === 'nc' ? { items: itemsNC.filter(i => i.lote).map(i => ({ lote: i.lote?.nombre, imagenes: i.imagenes || [] })) } : null,
+          ncData: result.tipo === 'nc' ? {
+            proyecto: result.proyecto || proyectoSeleccionado?.nombre || '',
+            items: itemsNC.filter(i => i.lote).map(i => ({
+              lote: i.lote?.nombre,
+              producto: i.lote?.producto,
+              defecto: i.defecto,
+              causa: i.causa,
+              cantidad: i.cantidad,
+              observaciones: i.observaciones,
+              imagenes: i.imagenes || [],
+            })),
+            detectadoPor: detectadoPor,
+            departamento: departamentoNC,
+            gravedad: gravedadNC,
+            urgencia: urgenciaNC,
+            resolucion: resolucion === 'refab' ? 'Requiere refabricación' : 'Se resuelve en obra',
+          } : null,
         })
       })
 
