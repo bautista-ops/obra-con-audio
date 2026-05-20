@@ -4,6 +4,8 @@ import { useState, useRef, useEffect } from 'react'
 import Image from 'next/image'
 import styles from './page.module.css'
 
+const itemVacio = () => ({ id: Date.now(), lote: null, busquedaLote: '', mostrarLotes: false, indiceLote: -1, defecto: '', causa: '', cantidad: '1', observaciones: '', imagenes: [] })
+
 export default function Home() {
   const [step, setStep] = useState('input') // input | loading | result
   const [tipo, setTipo] = useState(null)
@@ -40,7 +42,6 @@ export default function Home() {
   const [buscandoLotes, setBuscandoLotes] = useState(false)
   const [detectadoPor, setDetectadoPor] = useState('')
   const [departamentoNC, setDepartamentoNC] = useState('')
-  const itemVacio = () => ({ id: Date.now(), lote: null, busquedaLote: '', mostrarLotes: false, indiceLote: -1, defecto: '', causa: '', cantidad: '1', observaciones: '', imagenes: [] })
   const [itemsNC, setItemsNC] = useState([itemVacio()])
   const mediaRecorderRef = useRef(null)
   const audioChunksRef = useRef([])
