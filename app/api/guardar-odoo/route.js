@@ -206,12 +206,100 @@ export async function POST(request) {
       }
     }
 
+    // Crear alerta de calidad si es una NC
+    let alertaId = null
+    if (tipo === 'nc' && ncData) {
+      // Buscar user_id de Eric Regner (responsable de calidad)
+      const ericUserRes = await fetch(`${url}/xmlrpc/2/object`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/xml' },
+        body: `<?xml version="1.0"?>
+<methodCall>
+  <methodName>execute_kw</methodName>
+  <params>
+    <param><value><string>${DB}</string></value></param>
+    <param><value><int>${uid}</int></value></param>
+    <param><value><string>${apiKey}</string></value></param>
+    <param><value><string>res.users</string></value></param>
+    <param><value><string>search_read</string></value></param>
+    <param><value><array><data>
+      <value><array><data>
+        <value><array><data>
+          <value><string>login</string></value>
+          <value><string>=</string></value>
+          <value><string>eric@grupomsh.com.ar</string></value>
+        </data></array></value>
+      </data></array></value>
+    </data></array></value></param>
+    <param><value><struct>
+      <member><name>fields</name>
+        <value><array><data>
+          <value><string>id</string></value>
+          <value><string>name</string></value>
+        </data></array></value>
+      </member>
+      <member><name>limit</name><value><int>1</int></value></member>
+    </struct></value></param>
+  </params>
+</methodCall>`
+      })
+      const ericXml = await ericUserRes.text()
+      const ericIdM = ericXml.match(/<name>id<\/name>\s*<value><int>(\d+)<\/int>/)
+      const ericUserId = ericIdM ? parseInt(ericIdM[1]) : null
+
+      // Mapear prioridad: Alta=2, Media=1, Baja=0
+      const prioridadMap = { 'Alta': '2', 'Media': '1', 'Baja': '0' }
+      const prioridad = prioridadMap[ncData.gravedad] || '0'
+
+      // Armar descripción completa
+      const itemsDesc = (ncData.items || []).map(i =>
+        `Pieza: ${i.lote} | Defecto: ${i.defecto} | Causa: ${i.causa} | Cant: ${i.cantidad}${i.observaciones ? ' | Obs: ' + i.observaciones : ''}`
+      ).join('\n')
+
+      const descripcion = `${itemsDesc}\n\nDetectado por: ${ncData.detectadoPor || ncData.departamento || 'A confirmar'}\nResolución: ${ncData.resolucion || 'A definir'}\nUrgencia: ${ncData.urgencia || 'A definir'}`
+
+      // Título de la alerta
+      const primerItem = (ncData.items || [])[0]
+      const tituloAlerta = `NC - ${primerItem?.lote || obra || 'Sin especificar'} - ${primerItem?.defecto || 'Defecto'}`
+
+      const alertaBody = `<?xml version="1.0"?>
+<methodCall>
+  <methodName>execute_kw</methodName>
+  <params>
+    <param><value><string>${DB}</string></value></param>
+    <param><value><int>${uid}</int></value></param>
+    <param><value><string>${apiKey}</string></value></param>
+    <param><value><string>quality.alert</string></value></param>
+    <param><value><string>create</string></value></param>
+    <param><value><array><data>
+      <value><struct>
+        <member><name>name</name><value><string>${tituloAlerta}</string></value></member>
+        <member><name>description</name><value><string>${descripcion.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</string></value></member>
+        <member><name>priority</name><value><string>${prioridad}</string></value></member>
+        ${ericUserId ? `<member><name>user_id</name><value><int>${ericUserId}</int></value></member>` : ''}
+      </struct>
+    </value></data></array></value></param>
+    <param><value><struct></struct></value></param>
+  </params>
+</methodCall>`
+
+      const alertaRes = await fetch(`${url}/xmlrpc/2/object`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/xml' },
+        body: alertaBody
+      })
+      const alertaXml = await alertaRes.text()
+      const alertaIdM = alertaXml.match(/<int>(\d+)<\/int>/)
+      alertaId = alertaIdM ? parseInt(alertaIdM[1]) : null
+    }
+
     return Response.json({
       ok: true,
       adjunto_id: adjuntoId,
       msg_id: msgIdM ? parseInt(msgIdM[1]) : null,
       notificados: partnerIds.length,
       imagenes_subidas: imagenesSubidas,
+      alerta_calidad_id: alertaId,
     })
 
   } catch (error) {
