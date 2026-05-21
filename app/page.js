@@ -215,6 +215,27 @@ export default function Home() {
       const data = await res.json()
       clearInterval(interval)
       if (!res.ok) throw new Error(data.error || 'Error del servidor')
+      // Guardar ncData en el result para usarlo al guardar en ODOO
+      if (data.tipo === 'nc') {
+        data._ncData = {
+          proyecto: data.proyecto || proyectoSeleccionado?.nombre || '',
+          items: itemsNC.filter(i => i.lote).map(i => ({
+            lote: i.lote?.nombre,
+            lote_id: i.lote?.id,
+            producto: i.lote?.producto,
+            defecto: i.defecto,
+            causa: i.causa,
+            cantidad: i.cantidad,
+            observaciones: i.observaciones,
+            imagenes: i.imagenes || [],
+          })),
+          detectadoPor: detectadoPor,
+          departamento: departamentoNC,
+          gravedad: gravedadNC,
+          urgencia: urgenciaNC,
+          resolucion: resolucion === 'refab' ? 'Requiere refabricación' : 'Se resuelve en obra',
+        }
+      }
       setResult(data)
       setStep('result')
     } catch (e) {
@@ -506,24 +527,7 @@ export default function Home() {
           pdf_base64: pdfBase64,
           pdf_nombre: nombreArchivo,
           destino: destinoElegido,
-          ncData: result.tipo === 'nc' ? {
-            proyecto: result.proyecto || proyectoSeleccionado?.nombre || '',
-            items: itemsNC.filter(i => i.lote).map(i => ({
-              lote: i.lote?.nombre,
-              lote_id: i.lote?.id,
-              producto: i.lote?.producto,
-              defecto: i.defecto,
-              causa: i.causa,
-              cantidad: i.cantidad,
-              observaciones: i.observaciones,
-              imagenes: i.imagenes || [],
-            })),
-            detectadoPor: detectadoPor,
-            departamento: departamentoNC,
-            gravedad: gravedadNC,
-            urgencia: urgenciaNC,
-            resolucion: resolucion === 'refab' ? 'Requiere refabricación' : 'Se resuelve en obra',
-          } : null,
+          ncData: result._ncData || null,
         })
       })
 
