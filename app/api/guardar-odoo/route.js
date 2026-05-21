@@ -222,18 +222,18 @@ export async function POST(request) {
       for (const item of ncData.items) {
         const titulo = `NC - ${ncData.proyecto || obra || 'Sin especificar'} - ${item.lote || 'Pieza'} - ${item.defecto || 'Defecto'}`
 
-        const descHtml = [
-          `<p><strong>Lote/Pieza:</strong> ${item.lote || 'Sin especificar'}</p>`,
-          item.producto ? `<p><strong>Producto:</strong> ${item.producto}</p>` : '',
-          `<p><strong>Defecto:</strong> ${item.defecto || 'A relevar'}</p>`,
-          `<p><strong>Causa:</strong> ${item.causa || 'A relevar'}</p>`,
-          `<p><strong>Cantidad:</strong> ${item.cantidad || 1}</p>`,
-          item.observaciones ? `<p><strong>Observaciones:</strong> ${item.observaciones}</p>` : '',
-          `<hr/>`,
-          `<p><strong>Detectado por:</strong> ${detectadoPorStr}</p>`,
-          `<p><strong>Resolución:</strong> ${ncData.resolucion || 'A definir'}</p>`,
-          `<p><strong>Gravedad:</strong> ${ncData.gravedad || 'A definir'} | <strong>Urgencia:</strong> ${ncData.urgencia || 'A definir'}</p>`,
-        ].filter(Boolean).join('')
+        // Descripción = observaciones del usuario (campo principal)
+        const descHtml = item.observaciones
+          ? `<p>${item.observaciones}</p>`
+          : `<p>Defecto: ${item.defecto || 'A relevar'} | Causa: ${item.causa || 'A relevar'} | Detectado por: ${detectadoPorStr}</p>`
+
+        // Extraer product_tmpl_id del texto del producto ej: "[13927] 6155 - ..."
+        const prodMatch = (item.producto || '').match(/\[(\d+)\]/)
+        const productId = prodMatch ? parseInt(prodMatch[1]) : null
+        const productMember = productId ? `<member><name>product_tmpl_id</name><value><int>${productId}</int></value></member>` : ''
+
+        // lot_id — ID del lote seleccionado
+        const lotMember = item.lote_id ? `<member><name>lot_id</name><value><int>${item.lote_id}</int></value></member>` : ''
 
         const reasonId = CAUSA_MAP[item.causa] || null
         const reasonMember = reasonId ? `<member><name>reason_id</name><value><int>${reasonId}</int></value></member>` : ''
@@ -258,6 +258,8 @@ export async function POST(request) {
         <member><name>priority</name><value><string>${prioridad}</string></value></member>
         ${reasonMember}
         ${ericMember}
+        ${productMember}
+        ${lotMember}
       </struct>
     </value></data></array></value></param>
     <param><value><struct></struct></value></param>

@@ -510,6 +510,7 @@ export default function Home() {
             proyecto: result.proyecto || proyectoSeleccionado?.nombre || '',
             items: itemsNC.filter(i => i.lote).map(i => ({
               lote: i.lote?.nombre,
+              lote_id: i.lote?.id,
               producto: i.lote?.producto,
               defecto: i.defecto,
               causa: i.causa,
