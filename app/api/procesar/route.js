@@ -298,8 +298,8 @@ ${input}
       return Response.json({ error: 'Error al estructurar el documento. Intentá de nuevo.' }, { status: 500 })
     }
 
-    // Asignar ID de ODOO si el proyecto fue seleccionado
-    if (proyectoForzado && parsed.proyecto_id === null) {
+    // Siempre usar el ID del proyecto seleccionado por el usuario
+    if (proyectoForzado) {
       parsed.proyecto_id = proyectoForzado.id
     }
 
