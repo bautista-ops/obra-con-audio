@@ -228,10 +228,7 @@ export async function POST(request) {
           ? `<p>${item.observaciones}</p>`
           : `<p>Defecto: ${item.defecto || 'A relevar'} | Causa: ${item.causa || 'A relevar'} | Detectado por: ${detectadoPorStr}</p>`
 
-        // Extraer product_tmpl_id del texto del producto ej: "[13927] 6155 - ..."
-        const prodMatch = (item.producto || '').match(/\[(\d+)\]/)
-        const productId = prodMatch ? parseInt(prodMatch[1]) : null
-        const productMember = productId ? `<member><name>product_tmpl_id</name><value><int>${productId}</int></value></member>` : ''
+        const productMember = '' // product_tmpl_id requiere ID de product.template — se completa manualmente en ODOO
 
         // lot_id — ID del lote seleccionado
         const lotMember = item.lote_id ? `<member><name>lot_id</name><value><int>${item.lote_id}</int></value></member>` : ''
@@ -269,7 +266,6 @@ export async function POST(request) {
         })
 
         const alertaXml = await alertaRes.text()
-        console.log('[quality.alert create response]', alertaXml.substring(0, 500))
         const alertaIdM = alertaXml.match(/<int>(\d+)<\/int>/)
         const alertaId = alertaIdM ? parseInt(alertaIdM[1]) : null
         if (alertaId) {
