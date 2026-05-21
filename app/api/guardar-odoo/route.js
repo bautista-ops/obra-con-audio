@@ -269,6 +269,7 @@ export async function POST(request) {
         })
 
         const alertaXml = await alertaRes.text()
+        console.log('[quality.alert create response]', alertaXml.substring(0, 500))
         const alertaIdM = alertaXml.match(/<int>(\d+)<\/int>/)
         const alertaId = alertaIdM ? parseInt(alertaIdM[1]) : null
         if (alertaId) {
