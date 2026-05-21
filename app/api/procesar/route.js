@@ -303,19 +303,7 @@ ${input}
       parsed.proyecto_id = proyectoForzado.id
     }
 
-    // Postear nota en ODOO si hay proyecto y uid disponibles
-    if (uid && parsed.proyecto_id) {
-      try {
-        const contenido = parsed.tipo === 'minuta'
-          ? armarNotaMinuta(parsed)
-          : armarNotaNC(parsed)
-        const msgId = await postearNotaOdoo(uid, parsed.proyecto_id, contenido)
-        parsed.odoo_msg_id = msgId || null
-      } catch (e) {
-        console.error('Error posteando nota en ODOO (no crítico):', e)
-        parsed.odoo_msg_id = null
-      }
-    }
+    // Nota en ODOO se maneja desde guardar-odoo según destino elegido por el usuario
 
     return Response.json(parsed)
 
