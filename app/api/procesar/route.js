@@ -191,7 +191,8 @@ export async function POST(request) {
         const leads = await odooSearchRead(uid, 'crm.lead', [], ['id', 'name', 'partner_id', 'user_id', 'stage_id'], 200)
         proyectosCtx = leads
           .filter(r => {
-            const etapa = (r.stage_id || '').toLowerCase()
+            const etapaRaw = Array.isArray(r.stage_id) ? r.stage_id[1] : (r.stage_id || '')
+            const etapa = String(etapaRaw).toLowerCase()
             return etapa.includes('won') || etapa.includes('ganado') || etapa.includes('cotiz')
           })
           .map(r => ({
