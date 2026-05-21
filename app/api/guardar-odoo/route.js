@@ -83,6 +83,7 @@ export async function POST(request) {
     const uid = await odooAuth()
     if (!uid) return Response.json({ error: 'Auth ODOO fallida' }, { status: 401 })
 
+    console.log('[guardar-odoo] destino:', destino, '| ncData items:', ncData?.items?.length, '| proyecto_id:', proyecto_id)
     const guardarCRM = !destino || destino === 'crm' || destino === 'ambos'
     const guardarCalidad = !destino || destino === 'calidad' || destino === 'ambos'
 
