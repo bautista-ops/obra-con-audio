@@ -216,12 +216,38 @@ export async function POST(request) {
       const ericUserId = ericIdM ? parseInt(ericIdM[1]) : null
 
       const prioridad = PRIORIDAD_MAP[ncData.urgencia] || PRIORIDAD_MAP[ncData.gravedad] || '0'
+
+      // Obtener el último número de NC para numeración correlativa
+      const countRes = await fetch(`${url}/xmlrpc/2/object`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/xml' },
+        body: `<?xml version="1.0"?>
+<methodCall>
+  <methodName>execute_kw</methodName>
+  <params>
+    <param><value><string>${DB}</string></value></param>
+    <param><value><int>${uid}</int></value></param>
+    <param><value><string>${apiKey}</string></value></param>
+    <param><value><string>quality.alert</string></value></param>
+    <param><value><string>search_count</string></value></param>
+    <param><value><array><data>
+      <value><array><data></data></array></value>
+    </data></array></value></param>
+    <param><value><struct></struct></value></param>
+  </params>
+</methodCall>`
+      })
+      const countXml = await countRes.text()
+      const countM = countXml.match(/<int>(\d+)<\/int>/)
+      let ncCounter = countM ? parseInt(countM[1]) : 0
       const detectadoPorStr = ncData.detectadoPor
         ? `${ncData.detectadoPor}${ncData.departamento ? ` (${ncData.departamento})` : ''}`
         : ncData.departamento || 'A confirmar'
 
       for (const item of ncData.items) {
-        const titulo = `NC - ${ncData.proyecto || obra || 'Sin especificar'} - ${item.lote || 'Pieza'} - ${item.defecto || 'Defecto'}`
+        ncCounter++
+        const ncNum = String(ncCounter).padStart(4, '0')
+        const titulo = `NC-${ncNum} - ${ncData.proyecto || obra || 'Sin especificar'} - ${item.lote || 'Pieza'} - ${item.defecto || 'Defecto'}`
 
         // Descripción = observaciones del usuario (campo principal)
         const descHtml = item.observaciones
