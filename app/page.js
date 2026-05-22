@@ -272,7 +272,6 @@ export default function Home() {
     const ENRIQUE_EMAIL = 'enrique@grupomsh.com.ar'
     const NC_REFAB_EMAILS = ['enrique@grupomsh.com.ar', 'joaquin@grupomsh.com.ar', 'eric@grupomsh.com.ar']
 
-    console.log('[mail] asistentes:', asistentes, '| empleados con email:', empleados.filter(e => e.email).length)
     // Agregar emails de asistentes MSH seleccionados
     // asistentes puede tener "Nombre — Cargo", extraer solo el nombre para buscar
     const emailsAsistentes = asistentes
