@@ -279,7 +279,7 @@ export default function Home() {
         const nombre = entrada.split(' — ')[0].trim()
         return empleados.find(e => e.nombre === nombre)
       })
-      .filter(e => e && e.email && e.email !== ENRIQUE_EMAIL && e.email !== emailComercial)
+      .filter(e => e && e.email && e.email !== ENRIQUE_EMAIL)
       .map(e => e.email)
 
     const destinatarios = result.tipo === 'nc' && result.resolucion?.includes('refabricación')
