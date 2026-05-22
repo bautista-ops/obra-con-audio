@@ -940,7 +940,7 @@ export default function Home() {
                       <p className={styles.ncFieldLabel}>Departamento</p>
                       <select className={styles.ncSelect} value={departamentoNC} onChange={(e) => setDepartamentoNC(e.target.value)}>
                         <option value="">Seleccioná...</option>
-                        {['Oficina Técnica', 'Planta', 'Instalaciones', 'Logística', 'Comercial', 'Calidad', 'Ingeniería'].map(d => <option key={d} value={d}>{d}</option>)}
+                        {['Oficina Técnica', 'Planta', 'Instalaciones', 'Logística', 'Comercial', 'Calidad', 'Ingeniería', 'Cliente / Tercero'].map(d => <option key={d} value={d}>{d}</option>)}
                       </select>
                     </div>
                     <div className={styles.ncCelda}>
