@@ -193,7 +193,10 @@ export default function Home() {
             proyectos,
             proyectoForzado: proyectoSeleccionado,
             fechaMinuta: tipo === 'minuta' ? fechaMinuta : null,
-            asistentesMinuta: tipo === 'minuta' ? asistentes : [],
+            asistentesMinuta: tipo === 'minuta' ? asistentes.map(nombre => {
+              const emp = empleados.find(e => e.nombre === nombre)
+              return emp?.cargo ? `${nombre} — ${emp.cargo}` : nombre
+            }) : [],
             ncData: tipo === 'nc' ? {
               items: itemsNC.filter(i => i.lote).map(i => ({
                 lote: i.lote.nombre,
@@ -1254,35 +1257,46 @@ export default function Home() {
                   Descargar PDF
                 </button>
                 {result.proyecto_id && !guardadoOdoo && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 4 }}>
-                    <p style={{ fontSize: 11, color: '#aaa', textTransform: 'uppercase', letterSpacing: 0.5, margin: 0 }}>Guardar en ODOO</p>
-                    <div style={{ display: 'flex', gap: 6 }}>
-                      <button
-                        className={styles.copyBtn}
-                        onClick={() => guardarEnOdoo('calidad')}
-                        disabled={guardandoOdoo}
-                        style={{ flex: 1, opacity: guardandoOdoo && destino !== 'calidad' ? 0.4 : 1 }}
-                      >
-                        {guardandoOdoo && destino === 'calidad' ? 'Guardando...' : '🔍 Solo Calidad'}
-                      </button>
-                      <button
-                        className={styles.copyBtn}
-                        onClick={() => guardarEnOdoo('crm')}
-                        disabled={guardandoOdoo}
-                        style={{ flex: 1, opacity: guardandoOdoo && destino !== 'crm' ? 0.4 : 1 }}
-                      >
-                        {guardandoOdoo && destino === 'crm' ? 'Guardando...' : '📁 Solo CRM'}
-                      </button>
-                      <button
-                        className={styles.copyBtn}
-                        onClick={() => guardarEnOdoo('ambos')}
-                        disabled={guardandoOdoo}
-                        style={{ flex: 1, opacity: guardandoOdoo && destino !== 'ambos' ? 0.4 : 1 }}
-                      >
-                        {guardandoOdoo && destino === 'ambos' ? 'Guardando...' : '✓ Calidad + CRM'}
-                      </button>
+                  result.tipo === 'minuta' ? (
+                    <button
+                      className={styles.copyBtn}
+                      onClick={() => guardarEnOdoo('crm')}
+                      disabled={guardandoOdoo}
+                      style={{ width: '100%', marginTop: 4 }}
+                    >
+                      {guardandoOdoo ? 'Guardando...' : '📁 Guardar en ODOO'}
+                    </button>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 4 }}>
+                      <p style={{ fontSize: 11, color: '#aaa', textTransform: 'uppercase', letterSpacing: 0.5, margin: 0 }}>Guardar en ODOO</p>
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <button
+                          className={styles.copyBtn}
+                          onClick={() => guardarEnOdoo('calidad')}
+                          disabled={guardandoOdoo}
+                          style={{ flex: 1, opacity: guardandoOdoo && destino !== 'calidad' ? 0.4 : 1 }}
+                        >
+                          {guardandoOdoo && destino === 'calidad' ? 'Guardando...' : '🔍 Solo Calidad'}
+                        </button>
+                        <button
+                          className={styles.copyBtn}
+                          onClick={() => guardarEnOdoo('crm')}
+                          disabled={guardandoOdoo}
+                          style={{ flex: 1, opacity: guardandoOdoo && destino !== 'crm' ? 0.4 : 1 }}
+                        >
+                          {guardandoOdoo && destino === 'crm' ? 'Guardando...' : '📁 Solo CRM'}
+                        </button>
+                        <button
+                          className={styles.copyBtn}
+                          onClick={() => guardarEnOdoo('ambos')}
+                          disabled={guardandoOdoo}
+                          style={{ flex: 1, opacity: guardandoOdoo && destino !== 'ambos' ? 0.4 : 1 }}
+                        >
+                          {guardandoOdoo && destino === 'ambos' ? 'Guardando...' : '✓ Calidad + CRM'}
+                        </button>
+                      </div>
                     </div>
-                  </div>
+                  )
                 )}
                 {guardadoOdoo && (
                   <p style={{ fontSize: 13, color: '#27ae60', textAlign: 'center', marginTop: 4 }}>
