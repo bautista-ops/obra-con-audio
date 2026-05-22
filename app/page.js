@@ -268,9 +268,16 @@ export default function Home() {
     const cuerpo = result.tipo === 'minuta' ? buildCuerpoMinuta(result) : buildReporteNC(result)
     const ENRIQUE_EMAIL = 'enrique@grupomsh.com.ar'
     const NC_REFAB_EMAILS = ['enrique@grupomsh.com.ar', 'joaquin@grupomsh.com.ar', 'eric@grupomsh.com.ar']
+
+    // Agregar emails de asistentes MSH seleccionados
+    const emailsAsistentes = asistentes
+      .map(nombre => empleados.find(e => e.nombre === nombre))
+      .filter(e => e && e.email && e.email !== ENRIQUE_EMAIL && e.email !== emailComercial)
+      .map(e => e.email)
+
     const destinatarios = result.tipo === 'nc' && result.resolucion?.includes('refabricación')
       ? [emailComercial, ...NC_REFAB_EMAILS].filter(Boolean).join(',')
-      : [emailCliente, emailComercial, ENRIQUE_EMAIL].filter(Boolean).join(',')
+      : [emailCliente, emailComercial, ENRIQUE_EMAIL, ...emailsAsistentes].filter(Boolean).join(',')
 
     // Si hay fotos en NC, descargarlas antes de abrir el mail
     if (result.tipo === 'nc') {
