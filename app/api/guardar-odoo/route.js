@@ -4,13 +4,13 @@ const DB = 'grupomsh-main-16859458'
 
 // Mapeo causas agente → quality.reason IDs en ODOO
 const CAUSA_MAP = {
-  'Planos / Doc.': 5,
-  'Fabricación': 6,
-  'Máquina': 1,
-  'Proveedor': 7,
-  'Comunicación': 8,
-  'Logística': 9,
-  'Otra': 4,
+  'Planos / Doc.': 5,       // Planos / Documentación
+  'Fabricación': 6,          // Fabricación
+  'Máquina': 1,              // Falla en el centro de trabajo
+  'Proveedor': 7,            // Proveedor
+  'Comunicación': 8,         // Comunicación
+  'Logística': 9,            // Logística
+  'Otra': 4,                 // Others
 }
 
 const PRIORIDAD_MAP = { 'Alta': '3', 'Media': '2', 'Baja': '1' }
