@@ -58,11 +58,8 @@ export async function POST() {
     const uid = await odooAuth()
 
     const nuevas = [
-      'Planos / Documentación',
-      'Fabricación',
-      'Proveedor',
-      'Comunicación',
-      'Logística',
+      'Compras',
+      'Oficina Técnica',
     ]
 
     const creadas = []

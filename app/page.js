@@ -31,6 +31,7 @@ export default function Home() {
   const [emailComercial, setEmailComercial] = useState('')
   const [indiceProyecto, setIndiceProyecto] = useState(-1)
   const [guardandoOdoo, setGuardandoOdoo] = useState(false)
+  const [editando, setEditando] = useState(false)
   const [gravedadNC, setGravedadNC] = useState('')
   const [urgenciaNC, setUrgenciaNC] = useState('')
   const [guardadoOdoo, setGuardadoOdoo] = useState(false)
@@ -558,6 +559,7 @@ export default function Home() {
       setGuardandoOdoo(false)
     setGuardadoOdoo(false)
   setDestino(null)
+  setEditando(false)
   setGravedadNC('')
   setUrgenciaNC('')
     }
@@ -1134,12 +1136,18 @@ export default function Home() {
 
             {result && result.tipo === 'minuta' && (
               <div className={styles.card}>
-                <span className={styles.badgeMinuta}>Minuta de obra</span>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span className={styles.badgeMinuta}>Minuta de obra</span>
+                  <button
+                    onClick={() => setEditando(e => !e)}
+                    style={{ fontSize: 12, background: 'none', border: '1px solid #e0ddd8', borderRadius: 6, padding: '4px 10px', cursor: 'pointer', color: editando ? '#c8a96e' : '#888' }}
+                  >
+                    {editando ? '✓ Guardar cambios' : '✏️ Editar'}
+                  </button>
+                </div>
                 <div className={styles.resultRow}>
                   <span className={styles.resultLabel}>Obra</span>
-                  <span className={styles.resultValue}>
-                    {result.proyecto_id ? `#${result.proyecto_id} — ` : ''}{result.obra || '—'}
-                  </span>
+                  <span className={styles.resultValue}>{result.proyecto_id ? `#${result.proyecto_id} — ` : ''}{result.obra || '—'}</span>
                 </div>
                 {result.comercial && (
                   <div className={styles.resultRow}>
@@ -1149,7 +1157,10 @@ export default function Home() {
                 )}
                 <div className={styles.resultRow}>
                   <span className={styles.resultLabel}>Fecha</span>
-                  <span className={styles.resultValue}>{result.fecha || '—'}</span>
+                  {editando
+                    ? <input className={styles.ncSelect} type="date" value={result.fecha ? result.fecha.split('/').reverse().join('-') : ''} onChange={e => { const [y,m,d] = e.target.value.split('-'); setResult(r => ({...r, fecha: `${d}/${m}/${y}`})) }} style={{ flex: 1 }} />
+                    : <span className={styles.resultValue}>{result.fecha || '—'}</span>
+                  }
                 </div>
                 <div className={styles.resultRow}>
                   <span className={styles.resultLabel}>Asistentes</span>
@@ -1157,23 +1168,55 @@ export default function Home() {
                 </div>
                 <div className={styles.resultRow}>
                   <span className={styles.resultLabel}>Asunto del mail</span>
-                  <span className={styles.resultValue}>{result.asunto_email || '—'}</span>
+                  {editando
+                    ? <input className={styles.ncSelect} value={result.asunto_email || ''} onChange={e => setResult(r => ({...r, asunto_email: e.target.value}))} style={{ flex: 1 }} />
+                    : <span className={styles.resultValue}>{result.asunto_email || '—'}</span>
+                  }
                 </div>
                 <div className={styles.resultRow} style={{ flexDirection: 'column', gap: 6 }}>
-                  <span className={styles.resultLabel}>Borrador del mail</span>
-                  <pre className={styles.resultBody}>{buildCuerpoMinuta(result)}</pre>
+                  <span className={styles.resultLabel}>Temas tratados</span>
+                  {editando
+                    ? <textarea className={styles.ncSelect} rows={4} value={(result.temas || []).join('\n')} onChange={e => setResult(r => ({...r, temas: e.target.value.split('\n')}))} style={{ width: '100%', resize: 'vertical' }} />
+                    : <pre className={styles.resultBody}>{(result.temas || []).map(t => `• ${t}`).join('\n')}</pre>
+                  }
                 </div>
+                <div className={styles.resultRow} style={{ flexDirection: 'column', gap: 6 }}>
+                  <span className={styles.resultLabel}>Acuerdos</span>
+                  {editando
+                    ? <textarea className={styles.ncSelect} rows={3} value={(result.acuerdos || []).join('\n')} onChange={e => setResult(r => ({...r, acuerdos: e.target.value.split('\n')}))} style={{ width: '100%', resize: 'vertical' }} />
+                    : <pre className={styles.resultBody}>{(result.acuerdos || []).map(a => `• ${a}`).join('\n')}</pre>
+                  }
+                </div>
+                <div className={styles.resultRow} style={{ flexDirection: 'column', gap: 6 }}>
+                  <span className={styles.resultLabel}>Pendientes</span>
+                  {editando
+                    ? <textarea className={styles.ncSelect} rows={3} value={(result.pendientes || []).join('\n')} onChange={e => setResult(r => ({...r, pendientes: e.target.value.split('\n')}))} style={{ width: '100%', resize: 'vertical' }} />
+                    : <pre className={styles.resultBody}>{(result.pendientes || []).map(p => `• ${p}`).join('\n')}</pre>
+                  }
+                </div>
+                {!editando && (
+                  <div className={styles.resultRow} style={{ flexDirection: 'column', gap: 6 }}>
+                    <span className={styles.resultLabel}>Borrador del mail</span>
+                    <pre className={styles.resultBody}>{buildCuerpoMinuta(result)}</pre>
+                  </div>
+                )}
               </div>
             )}
 
             {result && result.tipo === 'nc' && (
               <div className={styles.card}>
-                <span className={styles.badgeNC}>No conformidad</span>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span className={styles.badgeNC}>No conformidad</span>
+                  <button
+                    onClick={() => setEditando(e => !e)}
+                    style={{ fontSize: 12, background: 'none', border: '1px solid #e0ddd8', borderRadius: 6, padding: '4px 10px', cursor: 'pointer', color: editando ? '#c8a96e' : '#888' }}
+                  >
+                    {editando ? '✓ Guardar cambios' : '✏️ Editar'}
+                  </button>
+                </div>
                 <div className={styles.resultRow}>
                   <span className={styles.resultLabel}>Proyecto</span>
-                  <span className={styles.resultValue}>
-                    {result.proyecto_id ? `#${result.proyecto_id} — ` : ''}{result.proyecto || '—'}
-                  </span>
+                  <span className={styles.resultValue}>{result.proyecto_id ? `#${result.proyecto_id} — ` : ''}{result.proyecto || '—'}</span>
                 </div>
                 {result.comercial && (
                   <div className={styles.resultRow}>
@@ -1183,16 +1226,41 @@ export default function Home() {
                 )}
                 <div className={styles.resultRow}>
                   <span className={styles.resultLabel}>Producto</span>
-                  <span className={styles.resultValue}>{result.producto || '—'}</span>
+                  {editando
+                    ? <input className={styles.ncSelect} value={result.producto || ''} onChange={e => setResult(r => ({...r, producto: e.target.value}))} style={{ flex: 1 }} />
+                    : <span className={styles.resultValue}>{result.producto || '—'}</span>
+                  }
                 </div>
                 <div className={styles.resultRow}>
                   <span className={styles.resultLabel}>Sector</span>
-                  <span className={styles.resultValue}>{result.sector || '—'}</span>
+                  {editando
+                    ? <input className={styles.ncSelect} value={result.sector || ''} onChange={e => setResult(r => ({...r, sector: e.target.value}))} style={{ flex: 1 }} />
+                    : <span className={styles.resultValue}>{result.sector || '—'}</span>
+                  }
                 </div>
                 <div className={styles.resultRow} style={{ flexDirection: 'column', gap: 6 }}>
                   <span className={styles.resultLabel}>Descripción del problema</span>
-                  <pre className={styles.resultBody}>{result.descripcion || '—'}</pre>
+                  {editando
+                    ? <textarea className={styles.ncSelect} rows={4} value={result.descripcion || ''} onChange={e => setResult(r => ({...r, descripcion: e.target.value}))} style={{ width: '100%', resize: 'vertical' }} />
+                    : <pre className={styles.resultBody}>{result.descripcion || '—'}</pre>
+                  }
                 </div>
+                <div className={styles.resultRow} style={{ flexDirection: 'column', gap: 6 }}>
+                  <span className={styles.resultLabel}>Causa</span>
+                  {editando
+                    ? <input className={styles.ncSelect} value={result.causa || ''} onChange={e => setResult(r => ({...r, causa: e.target.value}))} style={{ flex: 1 }} />
+                    : <span className={styles.resultValue}>{result.causa || '—'}</span>
+                  }
+                </div>
+                {result.contramedidas && result.contramedidas.length > 0 && (
+                  <div className={styles.resultRow} style={{ flexDirection: 'column', gap: 6 }}>
+                    <span className={styles.resultLabel}>Contramedidas</span>
+                    {editando
+                      ? <textarea className={styles.ncSelect} rows={4} value={(result.contramedidas || []).join('\n')} onChange={e => setResult(r => ({...r, contramedidas: e.target.value.split('\n')}))} style={{ width: '100%', resize: 'vertical' }} />
+                      : <pre className={styles.resultBody}>{(result.contramedidas || []).map(c => `• ${c}`).join('\n')}</pre>
+                    }
+                  </div>
+                )}
                 <div className={styles.resultRow}>
                   <span className={styles.resultLabel}>Resolución</span>
                   <span className={result.resolucion?.includes('refabricación') ? styles.tagRefab : styles.tagObra}>
