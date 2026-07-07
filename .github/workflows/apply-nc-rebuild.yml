@@ -1,0 +1,35 @@
+name: Apply NC rebuild patch
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/nc_patch_parts/**'
+      - '.github/workflows/apply-nc-rebuild.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Apply patch and clean up
+        run: |
+          set -euo pipefail
+          cat .github/nc_patch_parts/part_*.b64 > /tmp/nc_rebuild.patch.b64
+          base64 -d /tmp/nc_rebuild.patch.b64 > /tmp/nc_rebuild.patch
+          git apply --check /tmp/nc_rebuild.patch
+          git apply /tmp/nc_rebuild.patch
+          rm -rf .github/nc_patch_parts
+          rm -f .github/workflows/apply-nc-rebuild.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/api/empleados/route.js app/api/guardar-odoo/route.js app/page.js setup_campos_nc.py .github/nc_patch_parts .github/workflows/apply-nc-rebuild.yml
+          git commit -m "Rebuild NC form with optional piece, origin and responsible"
+          git push
