@@ -259,9 +259,24 @@ export async function POST(request) {
         // lot_id — ID del lote seleccionado
         const lotMember = item.lote_id ? `<member><name>lot_id</name><value><int>${item.lote_id}</int></value></member>` : ''
 
-        const reasonId = CAUSA_MAP[item.causa] || null
+        // Origen: usar reason_id del frontend si viene, sino mapear por causa del item
+        const reasonId = ncData.origenReasonId || CAUSA_MAP[item.causa] || null
         const reasonMember = reasonId ? `<member><name>reason_id</name><value><int>${reasonId}</int></value></member>` : ''
         const ericMember = ericUserId ? `<member><name>user_id</name><value><int>${ericUserId}</int></value></member>` : ''
+
+        // Pieza texto libre (cuando no hay lote catalogado)
+        const textoLibreMember = item.textoLibre
+          ? `<member><name>x_pieza_texto_libre</name><value><string>${item.textoLibre}</string></value></member>
+             <member><name>x_pieza_no_catalogada</name><value><boolean>1</boolean></value></member>`
+          : ''
+
+        // Responsable (empleado o externo)
+        const respEmpleadoMember = ncData.responsableEmpleadoId
+          ? `<member><name>x_responsable_empleado</name><value><int>${ncData.responsableEmpleadoId}</int></value></member>`
+          : ''
+        const respExternoMember = ncData.responsableExterno
+          ? `<member><name>x_responsable_externo</name><value><string>${ncData.responsableExterno}</string></value></member>`
+          : ''
 
         const alertaRes = await fetch(`${url}/xmlrpc/2/object`, {
           method: 'POST',
@@ -284,6 +299,9 @@ export async function POST(request) {
         ${ericMember}
         ${productMember}
         ${lotMember}
+        ${textoLibreMember}
+        ${respEmpleadoMember}
+        ${respExternoMember}
       </struct>
     </value></data></array></value></param>
     <param><value><struct></struct></value></param>
