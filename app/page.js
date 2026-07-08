@@ -4,7 +4,18 @@ import { useState, useRef, useEffect } from 'react'
 import Image from 'next/image'
 import styles from './page.module.css'
 
-const itemVacio = () => ({ id: Date.now(), lote: null, busquedaLote: '', mostrarLotes: false, indiceLote: -1, defecto: '', causa: '', cantidad: '1', observaciones: '', imagenes: [] })
+const itemVacio = () => ({ id: Date.now(), lote: null, busquedaLote: '', mostrarLotes: false, indiceLote: -1, textoLibre: '', modoTexto: false, defecto: '', causa: '', cantidad: '1', observaciones: '', imagenes: [] })
+
+// Origen → quality.reason IDs en Odoo (confirmados)
+const ORIGENES_NC = [
+  { reasonId: 6, label: 'Planta — Fabricación', dept: 'Planta' },
+  { reasonId: 1, label: 'Planta — Falla de máquina', dept: 'Planta' },
+  { reasonId: 5, label: 'Oficina Técnica', dept: 'Oficina Técnica' },
+  { reasonId: 9, label: 'Logística', dept: 'Logística' },
+  { reasonId: 7, label: 'Proveedor', dept: null },
+  { reasonId: 8, label: 'Comunicación', dept: null },
+  { reasonId: 4, label: 'Otros', dept: null },
+]
 
 export default function Home() {
   const [step, setStep] = useState('input') // input | loading | result
@@ -43,6 +54,13 @@ export default function Home() {
   const [buscandoLotes, setBuscandoLotes] = useState(false)
   const [detectadoPor, setDetectadoPor] = useState('')
   const [departamentoNC, setDepartamentoNC] = useState('')
+  const [origenNC, setOrigenNC] = useState(null) // reasonId de quality.reason
+  const [respTipo, setRespTipo] = useState(null) // 'empleado' | 'externo' | 'a_determinar'
+  const [respEmpleado, setRespEmpleado] = useState(null) // objeto {id, nombre, departamento}
+  const [respExterno, setRespExterno] = useState('')
+  const [busquedaResp, setBusquedaResp] = useState('')
+  const [mostrarEmpleados, setMostrarEmpleados] = useState(false)
+  const [verTodosEmp, setVerTodosEmp] = useState(false)
   const [itemsNC, setItemsNC] = useState([itemVacio()])
   const mediaRecorderRef = useRef(null)
   const audioChunksRef = useRef([])
@@ -109,7 +127,9 @@ export default function Home() {
     }
   }
 
-  const canSubmit = tipo !== null && (tipo !== 'nc' || resolucion !== null) && (tipo !== 'nc' || itemsNC.some(i => i.lote && i.defecto && i.causa)) && (tipo !== 'minuta' || inputText.trim().length > 5)
+  const origenSelObj = ORIGENES_NC.find(o => o.reasonId === origenNC) || null
+  const respValido = respTipo === 'a_determinar' || (respTipo === 'empleado' && respEmpleado) || (respTipo === 'externo' && respExterno.trim())
+  const canSubmit = tipo !== null && (tipo !== 'nc' || (resolucion !== null && origenNC !== null && respValido && itemsNC.some(i => i.defecto))) && (tipo !== 'minuta' || inputText.trim().length > 5)
 
   const selectTipo = (t) => {
     setTipo(t)
@@ -189,7 +209,10 @@ export default function Home() {
             tipo,
             resolucion,
             input: tipo === 'nc'
-              ? itemsNC.filter(i => i.lote).map(i => 'Pieza: ' + i.lote.nombre + ' | Producto: ' + i.lote.producto + ' | Defecto: ' + i.defecto + ' | Causa: ' + i.causa + ' | Cantidad: ' + i.cantidad + ' | Obs: ' + i.observaciones).join(' // ') + ' | Detectado por: ' + detectadoPor
+              ? itemsNC.filter(i => i.defecto).map(i => {
+                  const piezaStr = i.lote ? ('Pieza: ' + i.lote.nombre + ' | Producto: ' + i.lote.producto) : (i.textoLibre ? 'Pieza (texto libre): ' + i.textoLibre : 'Sin pieza')
+                  return piezaStr + ' | Defecto: ' + i.defecto + ' | Causa: ' + i.causa + ' | Cantidad: ' + i.cantidad + ' | Obs: ' + i.observaciones
+                }).join(' // ') + ' | Detectado por: ' + (respEmpleado?.nombre || respExterno || 'A determinar')
               : inputText,
             proyectos,
             proyectoForzado: proyectoSeleccionado,
@@ -199,17 +222,23 @@ export default function Home() {
               return emp?.cargo ? `${nombre} — ${emp.cargo}` : nombre
             }) : [],
             ncData: tipo === 'nc' ? {
-              items: itemsNC.filter(i => i.lote).map(i => ({
-                lote: i.lote.nombre,
-                producto: i.lote.producto,
+              items: itemsNC.filter(i => i.defecto).map(i => ({
+                lote: i.lote?.nombre || i.textoLibre || null,
+                lote_id: i.lote?.id || null,
+                producto: i.lote?.producto || null,
+                textoLibre: (!i.lote && i.textoLibre) ? i.textoLibre : null,
+                piezaNoCatalogada: !i.lote && !!i.textoLibre,
                 defecto: i.defecto,
                 causa: i.causa,
                 cantidad: i.cantidad,
                 observaciones: i.observaciones,
                 imagenes: i.imagenes || [],
               })),
-              detectadoPor,
-              departamento: departamentoNC,
+              detectadoPor: respEmpleado?.nombre || respExterno || 'A determinar',
+              departamento: origenSelObj?.label || departamentoNC,
+              origenReasonId: origenNC,
+              responsableEmpleadoId: respTipo === 'empleado' && respEmpleado ? respEmpleado.id : null,
+              responsableExterno: respTipo === 'externo' && respExterno.trim() ? respExterno.trim() : null,
               gravedad: gravedadNC,
               urgencia: urgenciaNC,
               resolucion,
@@ -223,18 +252,23 @@ export default function Home() {
       if (data.tipo === 'nc') {
         data._ncData = {
           proyecto: data.proyecto || proyectoSeleccionado?.nombre || '',
-          items: itemsNC.filter(i => i.lote).map(i => ({
-            lote: i.lote?.nombre,
-            lote_id: i.lote?.id,
-            producto: i.lote?.producto,
+          items: itemsNC.filter(i => i.defecto).map(i => ({
+            lote: i.lote?.nombre || i.textoLibre || null,
+            lote_id: i.lote?.id || null,
+            producto: i.lote?.producto || null,
+            textoLibre: (!i.lote && i.textoLibre) ? i.textoLibre : null,
+            piezaNoCatalogada: !i.lote && !!i.textoLibre,
             defecto: i.defecto,
             causa: i.causa,
             cantidad: i.cantidad,
             observaciones: i.observaciones,
             imagenes: i.imagenes || [],
           })),
-          detectadoPor: detectadoPor,
-          departamento: departamentoNC,
+          detectadoPor: respEmpleado?.nombre || respExterno || 'A determinar',
+          departamento: origenSelObj?.label || departamentoNC,
+          origenReasonId: origenNC,
+          responsableEmpleadoId: respTipo === 'empleado' && respEmpleado ? respEmpleado.id : null,
+          responsableExterno: respTipo === 'externo' && respExterno.trim() ? respExterno.trim() : null,
           gravedad: gravedadNC,
           urgencia: urgenciaNC,
           resolucion: resolucion === 'refab' ? 'Requiere refabricación' : 'Se resuelve en obra',
@@ -595,7 +629,13 @@ export default function Home() {
   setBuscandoLotes(false)
   setDetectadoPor('')
   setDepartamentoNC('')
-  setItemsNC([{ id: Date.now(), lote: null, busquedaLote: '', mostrarLotes: false, indiceLote: -1, defecto: '', causa: '', cantidad: '1', observaciones: '' }])
+  setOrigenNC(null)
+  setRespTipo(null)
+  setRespEmpleado(null)
+  setRespExterno('')
+  setBusquedaResp('')
+  setVerTodosEmp(false)
+  setItemsNC([itemVacio()])
   }
 
   return (
@@ -811,13 +851,32 @@ export default function Home() {
                           )}
                         </div>
 
-                        {/* Buscador de pieza con flechas */}
+                        {/* Buscador de pieza — OPCIONAL */}
                         <div className={styles.ncCeldaPieza}>
-                          <p className={styles.ncFieldLabel}>Pieza / Lote</p>
+                          <p className={styles.ncFieldLabel}>Pieza / Lote <span style={{fontWeight:'normal',color:'#999',fontSize:11}}>(opcional)</span></p>
                           {item.lote ? (
                             <div className={styles.ncLoteSelected}>
                               <span className={styles.ncLoteNombre}>{item.lote.nombre}</span>
-                              <button onClick={() => setItemsNC(prev => prev.map((it, i) => i === rowIdx ? {...it, lote: null, busquedaLote: ''} : it))}>✕</button>
+                              <button onClick={() => setItemsNC(prev => prev.map((it, i) => i === rowIdx ? {...it, lote: null, busquedaLote: '', modoTexto: false, textoLibre: ''} : it))}>✕</button>
+                            </div>
+                          ) : item.modoTexto ? (
+                            <div>
+                              <input
+                                className={styles.searchInput}
+                                placeholder="Describí la pieza (ej: perfil L 30x30 anodizado)..."
+                                value={item.textoLibre}
+                                onChange={(e) => setItemsNC(prev => prev.map((it, i) => i === rowIdx ? {...it, textoLibre: e.target.value} : it))}
+                              />
+                              {item.textoLibre && (
+                                <p style={{fontSize:11, color:'#e67e22', marginTop:4}}>⚠ Pieza no catalogada — irá al backlog de altas</p>
+                              )}
+                              <button
+                                className={styles.ncEliminarBtn}
+                                style={{marginTop:4}}
+                                onClick={() => setItemsNC(prev => prev.map((it, i) => i === rowIdx ? {...it, modoTexto: false, textoLibre: '', busquedaLote: ''} : it))}
+                              >
+                                ← Volver al buscador
+                              </button>
                             </div>
                           ) : (
                             <div className={styles.searchWrapper} style={{position:'relative'}}>
@@ -856,7 +915,18 @@ export default function Home() {
                                       </button>
                                     ))}
                                   </div>
-                                ) : <div className={styles.searchResults}><p className={styles.searchNoResult}>Sin coincidencias</p></div>
+                                ) : (
+                                  <div className={styles.searchResults}>
+                                    <p className={styles.searchNoResult}>Sin coincidencias</p>
+                                    <button
+                                      className={styles.searchResultItem}
+                                      style={{color:'#e67e22', borderTop:'1px solid #333'}}
+                                      onMouseDown={() => setItemsNC(prev => prev.map((it, i) => i === rowIdx ? {...it, modoTexto: true, mostrarLotes: false, textoLibre: it.busquedaLote, busquedaLote: ''} : it))}
+                                    >
+                                      ✏️ Cargar como texto libre
+                                    </button>
+                                  </div>
+                                )
                               })()}
                             </div>
                           )}
@@ -934,23 +1004,115 @@ export default function Home() {
                   </div>
                 </div>
 
-                {/* Detectado por + Departamento */}
+                {/* Origen del problema — OBLIGATORIO */}
                 <div className={styles.card}>
-                  <p className={styles.sectionLabel}>Detectado por</p>
-                  <div className={styles.ncFilaGrid}>
-                    <div className={styles.ncCelda}>
-                      <p className={styles.ncFieldLabel}>Departamento</p>
-                      <select className={styles.ncSelect} value={departamentoNC} onChange={(e) => setDepartamentoNC(e.target.value)}>
-                        <option value="">Seleccioná...</option>
-                        {['Oficina Técnica', 'Planta', 'Instalaciones', 'Logística', 'Comercial', 'Calidad', 'Ingeniería', 'Cliente / Tercero'].map(d => <option key={d} value={d}>{d}</option>)}
-                      </select>
-                    </div>
-                    <div className={styles.ncCelda}>
-                      <p className={styles.ncFieldLabel}>Nombre (opcional)</p>
-                      <input className={styles.ncSelect} placeholder="Nombre de quien detectó..."
-                        value={detectadoPor} onChange={(e) => setDetectadoPor(e.target.value)} />
-                    </div>
+                  <p className={styles.sectionLabel}>Origen del problema <span style={{color:'#c0392b',fontSize:11}}>*</span></p>
+                  <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:6}}>
+                    {ORIGENES_NC.map(o => (
+                      <button key={o.reasonId}
+                        className={`${styles.resolveOpt} ${origenNC === o.reasonId ? styles.selected : ''}`}
+                        onClick={() => {
+                          setOrigenNC(o.reasonId)
+                          // Si el empleado elegido no matchea el depto del nuevo origen, limpiar
+                          if (respEmpleado && o.dept && respEmpleado.departamento !== o.dept) {
+                            setRespEmpleado(null)
+                          }
+                          setVerTodosEmp(false)
+                        }}
+                        style={{textAlign:'left', padding:'8px 12px'}}
+                      >
+                        <span className={styles.resolveLabel} style={{fontSize:13}}>{o.label}</span>
+                      </button>
+                    ))}
                   </div>
+                </div>
+
+                {/* Responsable — OBLIGATORIO con 3 salidas */}
+                <div className={styles.card}>
+                  <p className={styles.sectionLabel}>Responsable <span style={{color:'#c0392b',fontSize:11}}>*</span></p>
+                  <div style={{display:'flex', gap:6, marginBottom:10}}>
+                    {[['empleado','Empleado MSH'],['externo','Externo / Otro'],['a_determinar','A determinar']].map(([val, lbl]) => (
+                      <button key={val}
+                        className={`${styles.resolveOpt} ${respTipo === val ? styles.selected : ''}`}
+                        onClick={() => setRespTipo(val)}
+                        style={{flex:1, textAlign:'center', padding:'8px 6px'}}
+                      >
+                        <span className={styles.resolveLabel} style={{fontSize:12}}>{lbl}</span>
+                      </button>
+                    ))}
+                  </div>
+
+                  {respTipo === 'empleado' && (
+                    <div>
+                      {respEmpleado ? (
+                        <div className={styles.ncLoteSelected}>
+                          <span className={styles.ncLoteNombre}>{respEmpleado.nombre} <span style={{color:'#999',fontSize:11}}>· {respEmpleado.departamento || respEmpleado.cargo}</span></span>
+                          <button onClick={() => setRespEmpleado(null)}>✕</button>
+                        </div>
+                      ) : (
+                        <div className={styles.searchWrapper} style={{position:'relative'}}>
+                          <input
+                            className={styles.searchInput}
+                            placeholder={origenSelObj?.dept && !verTodosEmp ? `Buscar en ${origenSelObj.dept}...` : 'Buscar empleado...'}
+                            value={busquedaResp}
+                            onChange={(e) => { setBusquedaResp(e.target.value); setMostrarEmpleados(true) }}
+                            onFocus={() => setMostrarEmpleados(true)}
+                            onBlur={() => setTimeout(() => setMostrarEmpleados(false), 150)}
+                          />
+                          {origenSelObj?.dept && (
+                            <button
+                              onClick={() => setVerTodosEmp(v => !v)}
+                              style={{fontSize:11, color:'#aaa', textDecoration:'underline', background:'none', border:'none', cursor:'pointer', marginTop:4, display:'block'}}
+                            >
+                              {verTodosEmp ? '← Filtrar por origen' : 'Mostrar todos los empleados'}
+                            </button>
+                          )}
+                          {mostrarEmpleados && (() => {
+                            let base = empleados
+                            if (!verTodosEmp && origenSelObj?.dept) {
+                              base = base.filter(e => e.departamento === origenSelObj.dept)
+                            }
+                            const q = busquedaResp.toLowerCase()
+                            const filtrados = q ? base.filter(e => e.nombre.toLowerCase().includes(q)) : base
+                            return filtrados.length > 0 ? (
+                              <div className={styles.searchResults}>
+                                {filtrados.slice(0,10).map(e => (
+                                  <button key={e.id}
+                                    className={styles.searchResultItem}
+                                    onMouseDown={() => { setRespEmpleado(e); setBusquedaResp(''); setMostrarEmpleados(false) }}
+                                  >
+                                    <span className={styles.searchResultNombre}>{e.nombre}</span>
+                                    <span className={styles.searchResultComercial}>{e.departamento || e.cargo}</span>
+                                  </button>
+                                ))}
+                              </div>
+                            ) : (
+                              <div className={styles.searchResults}>
+                                <p className={styles.searchNoResult}>Sin coincidencias</p>
+                                {!verTodosEmp && origenSelObj?.dept && (
+                                  <button className={styles.searchResultItem} style={{color:'#c8a96e'}}
+                                    onMouseDown={() => setVerTodosEmp(true)}>
+                                    Buscar en todos los empleados
+                                  </button>
+                                )}
+                              </div>
+                            )
+                          })()}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {respTipo === 'externo' && (
+                    <input className={styles.searchInput}
+                      placeholder="Nombre del tercero / proveedor / cliente..."
+                      value={respExterno}
+                      onChange={(e) => setRespExterno(e.target.value)} />
+                  )}
+
+                  {respTipo === 'a_determinar' && (
+                    <p style={{fontSize:12, color:'#999'}}>Se registra sin responsable — se asigna después.</p>
+                  )}
                 </div>
 
                 {/* Gravedad y Urgencia */}
@@ -1287,7 +1449,9 @@ export default function Home() {
                         </div>
                       </>
                     : <>
-                        Detectado por: <strong>{result.detectado_por?.trim() || result.departamento_nc || 'A confirmar'}</strong>
+                        Origen: <strong>{origenSelObj?.label || result.departamento_nc || 'A confirmar'}</strong>
+                        <br/>
+                        Responsable: <strong>{respEmpleado?.nombre || respExterno || 'A determinar'}</strong>
                         <br/>
                         Notificar a: <strong>Eric Regner · Joaquín Urién{result.comercial ? ` · ${result.comercial}` : ''}</strong>
                       </>
