@@ -112,8 +112,14 @@ async function subirPDF(token, folderId, fileName, pdfBase64) {
     },
     body,
   })
-  const data = await res.json()
-  return data.id ? data : null
+  const text = await res.text()
+  console.log('[drive] Upload response status:', res.status, 'body:', text.substring(0, 500))
+  try {
+    const data = JSON.parse(text)
+    return data.id ? data : null
+  } catch {
+    return null
+  }
 }
 
 // ── Función principal ─────────────────────────────────────
