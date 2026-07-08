@@ -88,20 +88,20 @@ async function contarMinutas(token, folderId) {
 async function subirPDF(token, folderId, fileName, pdfBase64) {
   const pdfBuffer = Buffer.from(pdfBase64, 'base64')
 
-  // Multipart upload: metadata + contenido en un solo request
+  // Multipart upload: metadata + contenido binario en un solo request
   const boundary = 'msh_drive_boundary'
   const metadata = JSON.stringify({
     name: fileName,
     parents: [folderId],
   })
 
+  const preamble = `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${metadata}\r\n--${boundary}\r\nContent-Type: application/pdf\r\n\r\n`
+  const epilogue = `\r\n--${boundary}--`
+
   const body = Buffer.concat([
-    Buffer.from(
-      `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${metadata}\r\n` +
-      `--${boundary}\r\nContent-Type: application/pdf\r\nContent-Transfer-Encoding: base64\r\n\r\n`
-    ),
+    Buffer.from(preamble),
     pdfBuffer,
-    Buffer.from(`\r\n--${boundary}--`),
+    Buffer.from(epilogue),
   ])
 
   const res = await fetch(`${UPLOAD_API}/files?uploadType=multipart&supportsAllDrives=true`, {
