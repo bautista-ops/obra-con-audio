@@ -1,47 +1,32 @@
 /**
- * drive.js — Google Drive upload via Service Account
- * Sin dependencias externas: usa crypto nativo de Node.js para firmar el JWT.
+ * drive.js — Google Drive upload via OAuth2 refresh token
+ * Sin dependencias externas.
  */
-
-import crypto from 'crypto'
 
 const DRIVE_API = 'https://www.googleapis.com/drive/v3'
 const UPLOAD_API = 'https://www.googleapis.com/upload/drive/v3'
 
 // ── Auth ──────────────────────────────────────────────────
-function createJWT(email, privateKey) {
-  const header = Buffer.from(JSON.stringify({ alg: 'RS256', typ: 'JWT' })).toString('base64url')
-  const now = Math.floor(Date.now() / 1000)
-  const claims = Buffer.from(JSON.stringify({
-    iss: email,
-    scope: 'https://www.googleapis.com/auth/drive',
-    aud: 'https://oauth2.googleapis.com/token',
-    iat: now,
-    exp: now + 3600,
-  })).toString('base64url')
-
-  const signInput = `${header}.${claims}`
-  const sign = crypto.createSign('RSA-SHA256')
-  sign.update(signInput)
-  const signature = sign.sign(privateKey, 'base64url')
-  return `${signInput}.${signature}`
-}
-
 async function getAccessToken() {
-  const email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL
-  const rawKey = process.env.GOOGLE_SERVICE_ACCOUNT_KEY
-  if (!email || !rawKey) return null
+  const clientId = process.env.GOOGLE_CLIENT_ID
+  const clientSecret = process.env.GOOGLE_CLIENT_SECRET
+  const refreshToken = process.env.GOOGLE_REFRESH_TOKEN
+  if (!clientId || !clientSecret || !refreshToken) return null
 
-  // Vercel a veces escapa los \n de la private key — restaurarlos
-  const privateKey = rawKey.replace(/\\n/g, '\n')
-
-  const jwt = createJWT(email, privateKey)
   const res = await fetch('https://oauth2.googleapis.com/token', {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: `grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer&assertion=${jwt}`,
+    body: new URLSearchParams({
+      client_id: clientId,
+      client_secret: clientSecret,
+      refresh_token: refreshToken,
+      grant_type: 'refresh_token',
+    }),
   })
   const data = await res.json()
+  if (!data.access_token) {
+    console.error('[drive] Auth error:', JSON.stringify(data).substring(0, 300))
+  }
   return data.access_token || null
 }
 
@@ -71,6 +56,7 @@ async function crearCarpeta(token, parentId, nombre) {
     }),
   })
   const data = await res.json()
+  if (!data.id) console.error('[drive] Error creando carpeta:', JSON.stringify(data).substring(0, 300))
   return data.id ? data : null
 }
 
@@ -88,7 +74,6 @@ async function contarMinutas(token, folderId) {
 async function subirPDF(token, folderId, fileName, pdfBase64) {
   const pdfBuffer = Buffer.from(pdfBase64, 'base64')
 
-  // Multipart upload: metadata + contenido binario en un solo request
   const boundary = 'msh_drive_boundary'
   const metadata = JSON.stringify({
     name: fileName,
@@ -113,7 +98,9 @@ async function subirPDF(token, folderId, fileName, pdfBase64) {
     body,
   })
   const text = await res.text()
-  console.log('[drive] Upload response status:', res.status, 'body:', text.substring(0, 500))
+  if (res.status !== 200) {
+    console.error('[drive] Upload error status:', res.status, 'body:', text.substring(0, 500))
+  }
   try {
     const data = JSON.parse(text)
     return data.id ? data : null
@@ -126,11 +113,6 @@ async function subirPDF(token, folderId, fileName, pdfBase64) {
 /**
  * Sube un PDF de minuta a Drive.
  * Estructura: MINUTAS DE OBRA / {proyecto} / Minuta_01_2026-07-08.pdf
- *
- * @param {string} proyecto - Nombre del proyecto (ej: "P-06663 6430 - Edificio Aurora")
- * @param {string} pdfBase64 - PDF en base64
- * @param {string} fecha - Fecha de la minuta (ej: "08/07/2026")
- * @returns {{ ok, fileName, fileId, folderUrl, error }}
  */
 export async function subirMinutaADrive(proyecto, pdfBase64, fecha) {
   try {
@@ -140,10 +122,8 @@ export async function subirMinutaADrive(proyecto, pdfBase64, fecha) {
     const token = await getAccessToken()
     if (!token) return { ok: false, error: 'No se pudo autenticar con Google Drive' }
 
-    // Nombre de la carpeta del proyecto — limpiar caracteres problemáticos
     const carpetaNombre = (proyecto || 'Sin proyecto').replace(/[<>:"/\\|?*]/g, '-').trim()
 
-    // Buscar o crear subcarpeta del proyecto
     let carpeta = await buscarCarpeta(token, parentFolder, carpetaNombre)
     if (!carpeta) {
       carpeta = await crearCarpeta(token, parentFolder, carpetaNombre)
@@ -151,14 +131,12 @@ export async function subirMinutaADrive(proyecto, pdfBase64, fecha) {
     }
     const folderId = carpeta.id
 
-    // Contar minutas existentes → número correlativo
     const count = await contarMinutas(token, folderId)
     const numero = String(count + 1).padStart(2, '0')
 
-    // Formatear fecha para el nombre del archivo
     const fechaSlug = (fecha || new Date().toISOString().split('T')[0])
       .replace(/\//g, '-')
-      .replace(/(\d{2})-(\d{2})-(\d{4})/, '$3-$2-$1') // DD/MM/YYYY → YYYY-MM-DD
+      .replace(/(\d{2})-(\d{2})-(\d{4})/, '$3-$2-$1')
 
     const fileName = `Minuta_${numero}_${fechaSlug}.pdf`
 
