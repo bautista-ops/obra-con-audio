@@ -8,13 +8,13 @@ const itemVacio = () => ({ id: Date.now(), lote: null, busquedaLote: '', mostrar
 
 // Origen → quality.reason IDs en Odoo (confirmados)
 const ORIGENES_NC = [
-  { reasonId: 6, label: 'Planta — Fabricación', dept: 'Planta' },
-  { reasonId: 1, label: 'Planta — Falla de máquina', dept: 'Planta' },
-  { reasonId: 5, label: 'Oficina Técnica', dept: 'Oficina Técnica' },
-  { reasonId: 9, label: 'Logística', dept: 'Logística' },
-  { reasonId: 7, label: 'Proveedor', dept: null },
-  { reasonId: 8, label: 'Comunicación', dept: null },
-  { reasonId: 4, label: 'Otros', dept: null },
+  { reasonId: 6, label: 'Planta — Fabricación', depts: ['PLANTA'] },
+  { reasonId: 1, label: 'Planta — Falla de máquina', depts: ['PLANTA', 'MANTENIMIENTO'] },
+  { reasonId: 5, label: 'Oficina Técnica', depts: ['OFICINA TECNICA', 'INGENIERIA E INSTALACIONES'] },
+  { reasonId: 9, label: 'Logística', depts: ['PLANTA', 'COORDINACION PROYECTO y PLANIFICACION'] },
+  { reasonId: 7, label: 'Proveedor', depts: null },
+  { reasonId: 8, label: 'Comunicación', depts: null },
+  { reasonId: 4, label: 'Otros', depts: null },
 ]
 
 export default function Home() {
@@ -1014,7 +1014,7 @@ export default function Home() {
                         onClick={() => {
                           setOrigenNC(o.reasonId)
                           // Si el empleado elegido no matchea el depto del nuevo origen, limpiar
-                          if (respEmpleado && o.dept && respEmpleado.departamento !== o.dept) {
+                          if (respEmpleado && o.depts && !o.depts.includes(respEmpleado.departamento)) {
                             setRespEmpleado(null)
                           }
                           setVerTodosEmp(false)
@@ -1053,13 +1053,13 @@ export default function Home() {
                         <div className={styles.searchWrapper} style={{position:'relative'}}>
                           <input
                             className={styles.searchInput}
-                            placeholder={origenSelObj?.dept && !verTodosEmp ? `Buscar en ${origenSelObj.dept}...` : 'Buscar empleado...'}
+                            placeholder={origenSelObj?.depts && !verTodosEmp ? `Buscar en ${origenSelObj.label}...` : 'Buscar empleado...'}
                             value={busquedaResp}
                             onChange={(e) => { setBusquedaResp(e.target.value); setMostrarEmpleados(true) }}
                             onFocus={() => setMostrarEmpleados(true)}
                             onBlur={() => setTimeout(() => setMostrarEmpleados(false), 150)}
                           />
-                          {origenSelObj?.dept && (
+                          {origenSelObj?.depts && (
                             <button
                               onClick={() => setVerTodosEmp(v => !v)}
                               style={{fontSize:11, color:'#aaa', textDecoration:'underline', background:'none', border:'none', cursor:'pointer', marginTop:4, display:'block'}}
@@ -1069,8 +1069,8 @@ export default function Home() {
                           )}
                           {mostrarEmpleados && (() => {
                             let base = empleados
-                            if (!verTodosEmp && origenSelObj?.dept) {
-                              base = base.filter(e => e.departamento === origenSelObj.dept)
+                            if (!verTodosEmp && origenSelObj?.depts) {
+                              base = base.filter(e => origenSelObj.depts.includes(e.departamento))
                             }
                             const q = busquedaResp.toLowerCase()
                             const filtrados = q ? base.filter(e => e.nombre.toLowerCase().includes(q)) : base
@@ -1089,7 +1089,7 @@ export default function Home() {
                             ) : (
                               <div className={styles.searchResults}>
                                 <p className={styles.searchNoResult}>Sin coincidencias</p>
-                                {!verTodosEmp && origenSelObj?.dept && (
+                                {!verTodosEmp && origenSelObj?.depts && (
                                   <button className={styles.searchResultItem} style={{color:'#c8a96e'}}
                                     onMouseDown={() => setVerTodosEmp(true)}>
                                     Buscar en todos los empleados
