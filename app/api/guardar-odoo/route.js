@@ -1,3 +1,5 @@
+import { subirMinutaADrive } from './drive.js'
+
 export const maxDuration = 60
 
 const DB = 'grupomsh-main-16859458'
@@ -178,6 +180,22 @@ export async function POST(request) {
       }
     }
 
+    // ── DRIVE (minutas) ──────────────────────────────────────
+    let driveResult = null
+    if (tipo === 'minuta' && pdf_base64) {
+      try {
+        driveResult = await subirMinutaADrive(obra, pdf_base64, fecha)
+        if (!driveResult.ok) {
+          console.error('[guardar-odoo] Drive upload falló:', driveResult.error)
+        } else {
+          console.log('[guardar-odoo] Minuta subida a Drive:', driveResult.fileName, driveResult.folderUrl)
+        }
+      } catch (driveErr) {
+        console.error('[guardar-odoo] Error inesperado en Drive:', driveErr)
+        driveResult = { ok: false, error: driveErr.message }
+      }
+    }
+
     // ── CALIDAD ───────────────────────────────────────────
     const alertaIds = []
     if (tipo === 'nc' && guardarCalidad && ncData?.items?.length > 0) {
@@ -329,6 +347,7 @@ export async function POST(request) {
       msg_id: msgId,
       alertas_calidad: alertaIds.length,
       alerta_ids: alertaIds,
+      drive: driveResult || null,
     })
 
   } catch (error) {
