@@ -50,7 +50,7 @@ export async function GET() {
           <value><string>name</string></value>
           <value><string>job_title</string></value>
           <value><string>work_email</string></value>
-          <value><string>work_email</string></value>
+          <value><string>department_id</string></value>
         </data></array></value>
       </member>
       <member><name>limit</name>
@@ -72,6 +72,7 @@ export async function GET() {
       const nameM = block.match(/<name>name<\/name>\s*<value><string>([^<]+)<\/string>/)
       const titleM = block.match(/<name>job_title<\/name>\s*<value><string>([^<]+)<\/string>/)
       const emailM = block.match(/<name>work_email<\/name>\s*<value><string>([^<]+)<\/string>/)
+      const deptM = block.match(/<name>department_id<\/name>\s*<value><array><data>\s*<value><int>\d+<\/int><\/value>\s*<value><string>([^<]+)<\/string>/)
 
       if (idM && nameM) {
         empleados.push({
@@ -79,6 +80,7 @@ export async function GET() {
           nombre: nameM[1].trim(),
           cargo: titleM ? titleM[1].trim() : '',
           email: emailM ? emailM[1].trim() : '',
+          departamento: deptM ? deptM[1].trim() : '',
         })
       }
     }
