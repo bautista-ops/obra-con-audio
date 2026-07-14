@@ -1281,29 +1281,29 @@ export default function Home() {
                   placeholder="Ej: Reunión en obra Kerschen hoy. Estuvieron Enrique y Rodrigo del estudio. Se definió que los tubos no llevarán tapa. Quedó pendiente el plano de la garita..."
                   rows={6}
                 />
-              </div>
 
-              {/* Fotos de minuta */}
-              <div style={{ marginTop: 12 }}>
-                <p className={styles.sectionLabel}>Fotos de la reunión <span style={{ fontWeight: 400, opacity: 0.5 }}>(opcional)</span></p>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 8 }}>
-                  {fotosMinuta.map((f, i) => (
-                    <div key={i} style={{ position: 'relative' }}>
-                      <img src={`data:image/jpeg;base64,${f.base64}`} style={{ width: 72, height: 72, objectFit: 'cover', borderRadius: 8, border: '1px solid var(--borde, #e0ddd8)' }} alt="" />
-                      <button onClick={() => setFotosMinuta(prev => prev.filter((_, j) => j !== i))}
-                        style={{ position: 'absolute', top: -6, right: -6, width: 18, height: 18, borderRadius: '50%', background: '#c0392b', border: 'none', color: '#fff', fontSize: 10, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
-                    </div>
-                  ))}
-                  <label style={{ width: 72, height: 72, border: '2px dashed var(--borde, #e0ddd8)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--acento, #c8a96e)', fontSize: 22, background: 'var(--fondo, #fafaf9)' }}>
-                    +
-                    <input type="file" accept="image/*" multiple style={{ display: 'none' }}
-                      onChange={async (e) => {
-                        const files = Array.from(e.target.files)
-                        const compressed = await Promise.all(files.map(comprimirImagen))
-                        setFotosMinuta(prev => [...prev, ...compressed])
-                        e.target.value = ''
-                      }} />
-                  </label>
+                {/* Fotos de minuta */}
+                <div style={{ marginTop: 12 }}>
+                  <p className={styles.sectionLabel}>Fotos de la reunión <span style={{ fontWeight: 400, opacity: 0.5 }}>(opcional)</span></p>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 8 }}>
+                    {fotosMinuta.map((f, i) => (
+                      <div key={i} style={{ position: 'relative' }}>
+                        <img src={`data:image/jpeg;base64,${f.base64}`} style={{ width: 72, height: 72, objectFit: 'cover', borderRadius: 8, border: '1px solid var(--borde, #e0ddd8)' }} alt="" />
+                        <button onClick={() => setFotosMinuta(prev => prev.filter((_, j) => j !== i))}
+                          style={{ position: 'absolute', top: -6, right: -6, width: 18, height: 18, borderRadius: '50%', background: '#c0392b', border: 'none', color: '#fff', fontSize: 10, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+                      </div>
+                    ))}
+                    <label style={{ width: 72, height: 72, border: '2px dashed var(--borde, #e0ddd8)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--acento, #c8a96e)', fontSize: 22, background: 'var(--fondo, #fafaf9)' }}>
+                      +
+                      <input type="file" accept="image/*" multiple style={{ display: 'none' }}
+                        onChange={async (e) => {
+                          const files = Array.from(e.target.files)
+                          const compressed = await Promise.all(files.map(comprimirImagen))
+                          setFotosMinuta(prev => [...prev, ...compressed])
+                          e.target.value = ''
+                        }} />
+                    </label>
+                  </div>
                 </div>
               </div>
             )}
