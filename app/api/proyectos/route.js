@@ -64,65 +64,64 @@ export async function GET() {
 
     console.log(`Auth OK, uid: ${uid}`)
 
-    // Search CRM leads
-    const searchRes = await fetch(`${url}/xmlrpc/2/object`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/xml' },
-      body: `<?xml version="1.0"?>
+    // Función auxiliar para llamar ODOO
+    const odooCall = async (model, fields, limit = 500, domain = '') => {
+      const res = await fetch(`${url}/xmlrpc/2/object`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/xml' },
+        body: `<?xml version="1.0"?>
 <methodCall>
   <methodName>execute_kw</methodName>
   <params>
     <param><value><string>${db}</string></value></param>
     <param><value><int>${uid}</int></value></param>
     <param><value><string>${apiKey}</string></value></param>
-    <param><value><string>crm.lead</string></value></param>
+    <param><value><string>${model}</string></value></param>
     <param><value><string>search_read</string></value></param>
     <param><value><array><data>
-      <value><array><data></data></array></value>
+      <value><array><data>${domain}</data></array></value>
     </data></array></value></param>
     <param><value><struct>
       <member><name>fields</name>
         <value><array><data>
-          <value><string>id</string></value>
-          <value><string>name</string></value>
-          <value><string>partner_id</string></value>
-          <value><string>user_id</string></value>
-          <value><string>stage_id</string></value>
+          ${fields.map(f => `<value><string>${f}</string></value>`).join('\n          ')}
         </data></array></value>
       </member>
-      <member><name>limit</name>
-        <value><int>500</int></value>
-      </member>
+      <member><name>limit</name><value><int>${limit}</int></value></member>
     </struct></value></param>
   </params>
 </methodCall>`
-    })
+      })
+      return res.text()
+    }
 
-    const searchText = await searchRes.text()
-    console.log('Raw XML sample:', searchText.substring(0, 400))
+    // Buscar CRM leads y project.project en paralelo
+    const [crmXml, projXml] = await Promise.all([
+      odooCall('crm.lead', ['id', 'name', 'partner_id', 'user_id', 'stage_id']),
+      odooCall('project.project', ['id', 'name', 'user_id'], 500,
+        `<value><array><data>
+          <value><string>active</string></value>
+          <value><string>=</string></value>
+          <value><boolean>1</boolean></value>
+        </data></array></value>`)
+    ])
 
-    // Split by record — each record is wrapped in <value><struct>...</struct></value>
-    const recordMatches = searchText.match(/<value>\s*<struct>([\s\S]*?)<\/struct>\s*<\/value>/g) || []
-    console.log(`Record blocks found: ${recordMatches.length}`)
+    // Parsear CRM
+    const crmBlocks = crmXml.match(/<value>\s*<struct>([\s\S]*?)<\/struct>\s*<\/value>/g) || []
+    console.log(`CRM blocks: ${crmBlocks.length}`)
 
     const records = []
 
-    for (const block of recordMatches) {
-      // Extract id
+    for (const block of crmBlocks) {
       const idM = block.match(/<name>id<\/name>\s*<value>\s*<int>(\d+)<\/int>/)
-      // Extract name
       const nameM = block.match(/<name>name<\/name>\s*<value>\s*<string>([^<]*)<\/string>/)
-      // Extract comercial (user_id) — second string in array
       const userM = block.match(/<name>user_id<\/name>[\s\S]*?<string>([^<]+)<\/string>/)
-      // Extract cliente (partner_id) — second string in array
       const partnerM = block.match(/<name>partner_id<\/name>[\s\S]*?<string>([^<]+)<\/string>/)
-      // Extract stage
       const stageM = block.match(/<name>stage_id<\/name>[\s\S]*?<string>([^<]+)<\/string>/)
 
       if (idM && nameM) {
         const etapa = stageM ? stageM[1] : ''
         const etapaLower = etapa.toLowerCase()
-        // Only include won/ganado/cotiz stages
         if (etapaLower.includes('won') || etapaLower.includes('ganado') || etapaLower.includes('cotiz')) {
           records.push({
             id: parseInt(idM[1]),
@@ -130,12 +129,46 @@ export async function GET() {
             cliente: partnerM ? partnerM[1] : null,
             comercial: userM ? userM[1] : null,
             etapa,
+            origen: 'crm',
           })
         }
       }
     }
 
-    console.log(`Proyectos filtrados: ${records.length}`)
+    // Parsear project.project
+    const projBlocks = projXml.match(/<value>\s*<struct>([\s\S]*?)<\/struct>\s*<\/value>/g) || []
+    console.log(`Project blocks: ${projBlocks.length}`)
+
+    const crmNombres = new Set(records.map(r => r.nombre.toLowerCase().trim()))
+
+    for (const block of projBlocks) {
+      const idM = block.match(/<name>id<\/name>\s*<value>\s*<int>(\d+)<\/int>/)
+      const nameM = block.match(/<name>name<\/name>\s*<value>\s*<string>([^<]*)<\/string>/)
+      const userM = block.match(/<name>user_id<\/name>[\s\S]*?<string>([^<]+)<\/string>/)
+
+      if (idM && nameM) {
+        const nombre = nameM[1].trim()
+        // No duplicar si ya viene del CRM con mismo nombre
+        if (!crmNombres.has(nombre.toLowerCase())) {
+          records.push({
+            id: parseInt(idM[1]),
+            nombre,
+            cliente: null,
+            comercial: userM ? userM[1] : null,
+            etapa: 'Proyecto',
+            origen: 'project',
+          })
+        }
+      }
+    }
+
+    // Ordenar: CRM primero, luego proyectos, ambos alfabéticos
+    records.sort((a, b) => {
+      if (a.origen !== b.origen) return a.origen === 'crm' ? -1 : 1
+      return a.nombre.localeCompare(b.nombre)
+    })
+
+    console.log(`Total proyectos: ${records.length}`)
     return Response.json({ proyectos: records })
 
   } catch (error) {
