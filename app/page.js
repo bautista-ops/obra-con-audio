@@ -21,6 +21,7 @@ export default function Home() {
   const [step, setStep] = useState('input') // input | loading | result
   const [tipo, setTipo] = useState(null)
   const [resolucion, setResolucion] = useState(null)
+  const [fotosMinuta, setFotosMinuta] = useState([])
   const [inputText, setInputText] = useState('')
   const [result, setResult] = useState(null)
   const [error, setError] = useState(null)
@@ -320,7 +321,7 @@ export default function Home() {
 
     const destinatarios = result.tipo === 'nc' && result.resolucion?.includes('refabricación')
       ? [emailComercial, ...NC_REFAB_EMAILS].filter(Boolean).join(',')
-      : [emailCliente, emailComercial, ENRIQUE_EMAIL, ...emailsAsistentes].filter(Boolean).join(',')
+      : [emailComercial, ENRIQUE_EMAIL, ...emailsAsistentes].filter(Boolean).join(',')
 
     // Si hay fotos en NC, descargarlas antes de abrir el mail
     if (result.tipo === 'nc') {
@@ -1281,7 +1282,32 @@ export default function Home() {
                   rows={6}
                 />
               </div>
-            )}
+
+              {/* Fotos de minuta */}
+              {tipo === 'minuta' && (
+                <div style={{ marginTop: 12 }}>
+                  <p className={styles.sectionLabel}>Fotos de la reunión <span style={{ fontWeight: 400, opacity: 0.5 }}>(opcional)</span></p>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 8 }}>
+                    {fotosMinuta.map((f, i) => (
+                      <div key={i} style={{ position: 'relative' }}>
+                        <img src={`data:image/jpeg;base64,${f.base64}`} style={{ width: 72, height: 72, objectFit: 'cover', borderRadius: 8, border: '1px solid var(--borde, #e0ddd8)' }} alt="" />
+                        <button onClick={() => setFotosMinuta(prev => prev.filter((_, j) => j !== i))}
+                          style={{ position: 'absolute', top: -6, right: -6, width: 18, height: 18, borderRadius: '50%', background: '#c0392b', border: 'none', color: '#fff', fontSize: 10, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+                      </div>
+                    ))}
+                    <label style={{ width: 72, height: 72, border: '2px dashed var(--borde, #e0ddd8)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--acento, #c8a96e)', fontSize: 22, background: 'var(--fondo, #fafaf9)' }}>
+                      +
+                      <input type="file" accept="image/*" multiple style={{ display: 'none' }}
+                        onChange={async (e) => {
+                          const files = Array.from(e.target.files)
+                          const compressed = await Promise.all(files.map(comprimirImagen))
+                          setFotosMinuta(prev => [...prev, ...compressed])
+                          e.target.value = ''
+                        }} />
+                    </label>
+                  </div>
+                </div>
+              )}
 
             <button className={styles.btnPrimary} onClick={processInput} disabled={!canSubmit}>
               Generar documento
@@ -1446,15 +1472,6 @@ export default function Home() {
                   {result.tipo === 'minuta'
                     ? <>
                         Destinatarios: <strong>Enrique Suárez{result.comercial ? ` · ${result.comercial}` : ' · Comercial a cargo'}</strong>
-                        <div style={{ marginTop: 6, fontSize: 12 }}>
-                          <span style={{ opacity: 0.6 }}>Email cliente: </span>
-                          {emailCliente
-                            ? <><a href={`mailto:${emailCliente}`} style={{ color: 'var(--acento, #c8a96e)', textDecoration: 'none' }}>{emailCliente}</a>
-                                {contactoNombre && <span style={{ opacity: 0.5 }}> — {contactoNombre}</span>}
-                              </>
-                            : <span style={{ opacity: 0.4, fontStyle: 'italic' }}>No cargado en ODOO</span>
-                          }
-                        </div>
                       </>
                     : <>
                         Origen: <strong>{origenSelObj?.label || result.departamento_nc || 'A confirmar'}</strong>
