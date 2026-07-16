@@ -403,19 +403,15 @@ export default function Home() {
       const margin = 20
       const fontName = doc.getFontList()['BCLiguria'] ? 'BCLiguria' : 'helvetica'
 
-      // Logo MSH
-      if (logoB64) {
-        doc.addImage('data:image/jpeg;base64,' + logoB64, 'JPEG', margin, 10, 40, 8)
-      } else {
-        doc.setFont(fontName, 'bold')
-        doc.setFontSize(18)
-        doc.setTextColor(200, 169, 110)
-        doc.text('MSH', margin, 18)
-      }
+      // Logo MSH en texto BC Liguria
+      doc.setFont(fontName, 'bold')
+      doc.setFontSize(22)
+      doc.setTextColor(20, 20, 20)
+      doc.text('MSH', margin, 18)
       doc.setFont(fontName, 'normal')
       doc.setFontSize(8)
       doc.setTextColor(150, 150, 150)
-      doc.text('Shaping the future of Metal', margin + 44, 18)
+      doc.text('Shaping the future of Metal', margin + 20, 18)
       doc.setDrawColor(200, 169, 110)
       doc.setLineWidth(0.5)
       doc.line(margin, 22, pageW - margin, 22)
@@ -534,19 +530,15 @@ export default function Home() {
       const fontName = doc.getFontList()['BCLiguria'] ? 'BCLiguria' : 'helvetica'
 
       // Header — MSH en texto, sin imagen
-      // Logo MSH
-      if (logoB64) {
-        doc.addImage('data:image/jpeg;base64,' + logoB64, 'JPEG', margin, 10, 40, 8)
-      } else {
-        doc.setFont(fontName, 'bold')
-        doc.setFontSize(18)
-        doc.setTextColor(200, 169, 110)
-        doc.text('MSH', margin, 18)
-      }
+      // Logo MSH en texto BC Liguria
+      doc.setFont(fontName, 'bold')
+      doc.setFontSize(22)
+      doc.setTextColor(20, 20, 20)
+      doc.text('MSH', margin, 18)
       doc.setFont(fontName, 'normal')
       doc.setFontSize(8)
       doc.setTextColor(150, 150, 150)
-      doc.text('Shaping the future of Metal', margin + 44, 18)
+      doc.text('Shaping the future of Metal', margin + 20, 18)
 
       doc.setDrawColor(200, 169, 110)
       doc.setLineWidth(0.5)
