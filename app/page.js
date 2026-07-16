@@ -344,14 +344,8 @@ export default function Home() {
       }
     }
 
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
-    if (isIOS) {
-      const mailtoUrl = `mailto:${destinatarios}?subject=${encodeURIComponent(asunto)}&body=${encodeURIComponent(cuerpo)}`
-      window.location.href = mailtoUrl
-    } else {
-      const gmailUrl = `https://mail.google.com/mail/?view=cm&to=${encodeURIComponent(destinatarios)}&su=${encodeURIComponent(asunto)}&body=${encodeURIComponent(cuerpo)}`
-      window.open(gmailUrl, '_blank')
-    }
+    const gmailUrl = `https://mail.google.com/mail/?view=cm&to=${encodeURIComponent(destinatarios)}&su=${encodeURIComponent(asunto)}&body=${encodeURIComponent(cuerpo)}`
+    window.open(gmailUrl, '_blank')
   }
 
 
@@ -441,6 +435,22 @@ export default function Home() {
         addSeccion('Acuerdos y decisiones', result.acuerdos)
         addSeccion('Pendientes', result.pendientes)
         addSeccion('Próxima visita', [result.proxima_visita])
+        // Fotos de minuta en PDF descarga
+        if (fotosMinuta && fotosMinuta.length > 0) {
+          if (y > pageH - 60) { doc.addPage(); y = 20 }
+          doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(200, 169, 110)
+          doc.text('FOTOS DE LA REUNIÓN', margin, y); y += 6
+          const fW = 55; const fH = 40; const gap = 5; let xF = margin
+          for (const foto of fotosMinuta) {
+            const b64 = foto.base64 || (typeof foto === 'string' && foto.startsWith('data:') ? foto.split(',')[1] : foto)
+            if (!b64) continue
+            if (xF + fW > pageW - margin) { xF = margin; y += fH + gap }
+            if (y + fH > pageH - 20) { doc.addPage(); y = 20; xF = margin }
+            try { doc.addImage('data:image/jpeg;base64,' + b64, 'JPEG', xF, y, fW, fH) } catch(e) {}
+            xF += fW + gap
+          }
+          y += fH + 8
+        }
       } else {
         addSeccion('Producto', [result.producto])
         addSeccion('Sector origen', [result.sector])
@@ -545,6 +555,22 @@ export default function Home() {
         addSeccion('Acuerdos y decisiones', result.acuerdos)
         addSeccion('Pendientes', result.pendientes)
         addSeccion('Próxima visita', [result.proxima_visita])
+        // Fotos de minuta en PDF guardar
+        if (fotosMinuta && fotosMinuta.length > 0) {
+          if (y > pageH - 60) { doc.addPage(); y = 20 }
+          doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(200, 169, 110)
+          doc.text('FOTOS DE LA REUNIÓN', margin, y); y += 6
+          const fW = 55; const fH = 40; const gap = 5; let xF = margin
+          for (const foto of fotosMinuta) {
+            const b64 = foto.base64 || (typeof foto === 'string' && foto.startsWith('data:') ? foto.split(',')[1] : foto)
+            if (!b64) continue
+            if (xF + fW > pageW - margin) { xF = margin; y += fH + gap }
+            if (y + fH > pageH - 20) { doc.addPage(); y = 20; xF = margin }
+            try { doc.addImage('data:image/jpeg;base64,' + b64, 'JPEG', xF, y, fW, fH) } catch(e) {}
+            xF += fW + gap
+          }
+          y += fH + 8
+        }
       } else {
         addSeccion('Producto', [result.producto + (result.terminacion ? ' — ' + result.terminacion : '')])
         addSeccion('Sector origen', [result.sector])
@@ -579,6 +605,7 @@ export default function Home() {
           pdf_nombre: nombreArchivo,
           destino: destinoElegido,
           ncData: result._ncData || null,
+          fotosMinuta: tipo === 'minuta' ? fotosMinuta : [],
         })
       })
 

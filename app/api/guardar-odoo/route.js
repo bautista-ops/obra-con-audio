@@ -74,7 +74,7 @@ async function crearAdjunto(url, apiKey, uid, nombre, base64, mimeType, resModel
 
 export async function POST(request) {
   try {
-    const { proyecto_id, tipo, fecha, obra, pdf_base64, pdf_nombre, ncData, destino } = await request.json()
+    const { proyecto_id, tipo, fecha, obra, pdf_base64, pdf_nombre, ncData, destino, fotosMinuta } = await request.json()
 
     if (!proyecto_id || !pdf_base64) {
       return Response.json({ error: 'Faltan datos requeridos' }, { status: 400 })
@@ -194,6 +194,17 @@ export async function POST(request) {
         console.error('[guardar-odoo] Error inesperado en Drive:', driveErr)
         driveResult = { ok: false, error: driveErr.message }
       }
+    }
+
+    // ── FOTOS MINUTA ─────────────────────────────────────────
+    if (tipo === 'minuta' && fotosMinuta && fotosMinuta.length > 0 && guardarCRM) {
+      for (let i = 0; i < fotosMinuta.length; i++) {
+        const foto = fotosMinuta[i]
+        const base64 = foto.base64 || (foto.startsWith('data:') ? foto.split(',')[1] : foto)
+        const nombre = `foto_minuta_${i + 1}.jpg`
+        await crearAdjunto(url, apiKey, uid, nombre, base64, 'image/jpeg', 'crm.lead', proyecto_id)
+      }
+      console.log(`[guardar-odoo] ${fotosMinuta.length} fotos de minuta adjuntadas al CRM`)
     }
 
     // ── CALIDAD ───────────────────────────────────────────
