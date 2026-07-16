@@ -383,15 +383,26 @@ export default function Home() {
       }
       const { jsPDF } = window.jspdf
       const doc = new jsPDF({ unit: 'mm', format: 'a4' })
+
+      // Cargar BC Liguria
+      try {
+        const fontRes = await fetch('/BCLiguria-Regular-b64.txt')
+        const fontB64 = await fontRes.text()
+        doc.addFileToVFS('BCLiguria-Regular.ttf', fontB64)
+        doc.addFont('BCLiguria-Regular.ttf', 'BCLiguria', 'normal')
+        doc.addFont('BCLiguria-Regular.ttf', 'BCLiguria', 'bold')
+      } catch(e) { console.warn('BC Liguria no disponible, usando Helvetica') }
+
       const pageW = doc.internal.pageSize.getWidth()
       const pageH = doc.internal.pageSize.getHeight()
       const margin = 20
+      const fontName = doc.getFontList()['BCLiguria'] ? 'BCLiguria' : 'helvetica'
 
-      doc.setFont('helvetica', 'bold')
+      doc.setFont(fontName, 'bold')
       doc.setFontSize(18)
       doc.setTextColor(200, 169, 110)
       doc.text('MSH', margin, 18)
-      doc.setFont('helvetica', 'normal')
+      doc.setFont(fontName, 'normal')
       doc.setFontSize(8)
       doc.setTextColor(150, 150, 150)
       doc.text('Shaping the future of Metal', margin + 18, 18)
@@ -399,11 +410,11 @@ export default function Home() {
       doc.setLineWidth(0.5)
       doc.line(margin, 22, pageW - margin, 22)
 
-      doc.setFont('helvetica', 'bold')
+      doc.setFont(fontName, 'bold')
       doc.setFontSize(13)
       doc.setTextColor(20, 20, 20)
       doc.text(result.tipo === 'minuta' ? 'MINUTA DE REUNIÓN DE OBRA' : 'NO CONFORMIDAD — REPORTE', margin, 31)
-      doc.setFont('helvetica', 'normal')
+      doc.setFont(fontName, 'normal')
       doc.setFontSize(10)
       doc.setTextColor(100, 100, 100)
       doc.text(result.obra || result.proyecto || '', margin, 38)
@@ -413,9 +424,9 @@ export default function Home() {
       const addSeccion = (tituloSec, items) => {
         if (!items || (Array.isArray(items) && items.length === 0)) return
         if (y > pageH - 30) { doc.addPage(); y = 20 }
-        doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(200, 169, 110)
+        doc.setFont(fontName, 'bold'); doc.setFontSize(9); doc.setTextColor(200, 169, 110)
         doc.text(tituloSec.toUpperCase(), margin, y); y += 5
-        doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(40, 40, 40)
+        doc.setFont(fontName, 'normal'); doc.setFontSize(9); doc.setTextColor(40, 40, 40)
         const lista = Array.isArray(items) ? items : [items]
         for (const item of lista) {
           if (!item) continue
@@ -438,7 +449,7 @@ export default function Home() {
         // Fotos de minuta en PDF descarga
         if (fotosMinuta && fotosMinuta.length > 0) {
           if (y > pageH - 60) { doc.addPage(); y = 20 }
-          doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(200, 169, 110)
+          doc.setFont(fontName, 'bold'); doc.setFontSize(9); doc.setTextColor(200, 169, 110)
           doc.text('FOTOS DE LA REUNIÓN', margin, y); y += 6
           const fW = 55; const fH = 40; const gap = 5; let xF = margin
           for (const foto of fotosMinuta) {
@@ -492,16 +503,27 @@ export default function Home() {
       }
       const { jsPDF } = window.jspdf
       const doc = new jsPDF({ unit: 'mm', format: 'a4' })
+
+      // Cargar BC Liguria
+      try {
+        const fontRes = await fetch('/BCLiguria-Regular-b64.txt')
+        const fontB64 = await fontRes.text()
+        doc.addFileToVFS('BCLiguria-Regular.ttf', fontB64)
+        doc.addFont('BCLiguria-Regular.ttf', 'BCLiguria', 'normal')
+        doc.addFont('BCLiguria-Regular.ttf', 'BCLiguria', 'bold')
+      } catch(e) { console.warn('BC Liguria no disponible, usando Helvetica') }
+
       const pageW = doc.internal.pageSize.getWidth()
       const pageH = doc.internal.pageSize.getHeight()
       const margin = 20
+      const fontName = doc.getFontList()['BCLiguria'] ? 'BCLiguria' : 'helvetica'
 
       // Header — MSH en texto, sin imagen
-      doc.setFont('helvetica', 'bold')
+      doc.setFont(fontName, 'bold')
       doc.setFontSize(18)
       doc.setTextColor(200, 169, 110)
       doc.text('MSH', margin, 18)
-      doc.setFont('helvetica', 'normal')
+      doc.setFont(fontName, 'normal')
       doc.setFontSize(8)
       doc.setTextColor(150, 150, 150)
       doc.text('Shaping the future of Metal', margin + 18, 18)
@@ -510,13 +532,13 @@ export default function Home() {
       doc.setLineWidth(0.5)
       doc.line(margin, 22, pageW - margin, 22)
 
-      doc.setFont('helvetica', 'bold')
+      doc.setFont(fontName, 'bold')
       doc.setFontSize(13)
       doc.setTextColor(20, 20, 20)
       const titulo = result.tipo === 'minuta' ? 'MINUTA DE REUNIÓN DE OBRA' : 'NO CONFORMIDAD — REPORTE'
       doc.text(titulo, margin, 31)
 
-      doc.setFont('helvetica', 'normal')
+      doc.setFont(fontName, 'normal')
       doc.setFontSize(10)
       doc.setTextColor(100, 100, 100)
       doc.text(result.obra || result.proyecto || '', margin, 38)
@@ -527,12 +549,12 @@ export default function Home() {
       const addSeccion = (tituloSec, items) => {
         if (!items || (Array.isArray(items) && items.length === 0)) return
         if (y > pageH - 30) { doc.addPage(); y = 20 }
-        doc.setFont('helvetica', 'bold')
+        doc.setFont(fontName, 'bold')
         doc.setFontSize(9)
         doc.setTextColor(200, 169, 110)
         doc.text(tituloSec.toUpperCase(), margin, y)
         y += 5
-        doc.setFont('helvetica', 'normal')
+        doc.setFont(fontName, 'normal')
         doc.setFontSize(9)
         doc.setTextColor(40, 40, 40)
         const lista = Array.isArray(items) ? items : [items]
@@ -558,7 +580,7 @@ export default function Home() {
         // Fotos de minuta en PDF guardar
         if (fotosMinuta && fotosMinuta.length > 0) {
           if (y > pageH - 60) { doc.addPage(); y = 20 }
-          doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(200, 169, 110)
+          doc.setFont(fontName, 'bold'); doc.setFontSize(9); doc.setTextColor(200, 169, 110)
           doc.text('FOTOS DE LA REUNIÓN', margin, y); y += 6
           const fW = 55; const fH = 40; const gap = 5; let xF = margin
           for (const foto of fotosMinuta) {
