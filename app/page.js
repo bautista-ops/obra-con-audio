@@ -384,28 +384,38 @@ export default function Home() {
       const { jsPDF } = window.jspdf
       const doc = new jsPDF({ unit: 'mm', format: 'a4' })
 
-      // Cargar BC Liguria
+      // Cargar BC Liguria y logo
+      let logoB64 = null
       try {
-        const fontRes = await fetch('/BCLiguria-Regular-b64.txt')
+        const [fontRes, logoRes] = await Promise.all([
+          fetch('/BCLiguria-Regular-b64.txt'),
+          fetch('/logo-pdf-b64.txt'),
+        ])
         const fontB64 = await fontRes.text()
         doc.addFileToVFS('BCLiguria-Regular.ttf', fontB64)
         doc.addFont('BCLiguria-Regular.ttf', 'BCLiguria', 'normal')
         doc.addFont('BCLiguria-Regular.ttf', 'BCLiguria', 'bold')
-      } catch(e) { console.warn('BC Liguria no disponible, usando Helvetica') }
+        logoB64 = await logoRes.text()
+      } catch(e) { console.warn('Assets no disponibles, usando defaults') }
 
       const pageW = doc.internal.pageSize.getWidth()
       const pageH = doc.internal.pageSize.getHeight()
       const margin = 20
       const fontName = doc.getFontList()['BCLiguria'] ? 'BCLiguria' : 'helvetica'
 
-      doc.setFont(fontName, 'bold')
-      doc.setFontSize(18)
-      doc.setTextColor(200, 169, 110)
-      doc.text('MSH', margin, 18)
+      // Logo MSH
+      if (logoB64) {
+        doc.addImage('data:image/jpeg;base64,' + logoB64, 'JPEG', margin, 10, 40, 8)
+      } else {
+        doc.setFont(fontName, 'bold')
+        doc.setFontSize(18)
+        doc.setTextColor(200, 169, 110)
+        doc.text('MSH', margin, 18)
+      }
       doc.setFont(fontName, 'normal')
       doc.setFontSize(8)
       doc.setTextColor(150, 150, 150)
-      doc.text('Shaping the future of Metal', margin + 18, 18)
+      doc.text('Shaping the future of Metal', margin + 44, 18)
       doc.setDrawColor(200, 169, 110)
       doc.setLineWidth(0.5)
       doc.line(margin, 22, pageW - margin, 22)
@@ -504,14 +514,19 @@ export default function Home() {
       const { jsPDF } = window.jspdf
       const doc = new jsPDF({ unit: 'mm', format: 'a4' })
 
-      // Cargar BC Liguria
+      // Cargar BC Liguria y logo
+      let logoB64 = null
       try {
-        const fontRes = await fetch('/BCLiguria-Regular-b64.txt')
+        const [fontRes, logoRes] = await Promise.all([
+          fetch('/BCLiguria-Regular-b64.txt'),
+          fetch('/logo-pdf-b64.txt'),
+        ])
         const fontB64 = await fontRes.text()
         doc.addFileToVFS('BCLiguria-Regular.ttf', fontB64)
         doc.addFont('BCLiguria-Regular.ttf', 'BCLiguria', 'normal')
         doc.addFont('BCLiguria-Regular.ttf', 'BCLiguria', 'bold')
-      } catch(e) { console.warn('BC Liguria no disponible, usando Helvetica') }
+        logoB64 = await logoRes.text()
+      } catch(e) { console.warn('Assets no disponibles, usando defaults') }
 
       const pageW = doc.internal.pageSize.getWidth()
       const pageH = doc.internal.pageSize.getHeight()
@@ -519,14 +534,19 @@ export default function Home() {
       const fontName = doc.getFontList()['BCLiguria'] ? 'BCLiguria' : 'helvetica'
 
       // Header — MSH en texto, sin imagen
-      doc.setFont(fontName, 'bold')
-      doc.setFontSize(18)
-      doc.setTextColor(200, 169, 110)
-      doc.text('MSH', margin, 18)
+      // Logo MSH
+      if (logoB64) {
+        doc.addImage('data:image/jpeg;base64,' + logoB64, 'JPEG', margin, 10, 40, 8)
+      } else {
+        doc.setFont(fontName, 'bold')
+        doc.setFontSize(18)
+        doc.setTextColor(200, 169, 110)
+        doc.text('MSH', margin, 18)
+      }
       doc.setFont(fontName, 'normal')
       doc.setFontSize(8)
       doc.setTextColor(150, 150, 150)
-      doc.text('Shaping the future of Metal', margin + 18, 18)
+      doc.text('Shaping the future of Metal', margin + 44, 18)
 
       doc.setDrawColor(200, 169, 110)
       doc.setLineWidth(0.5)
