@@ -402,6 +402,7 @@ export default function Home() {
       const pageH = doc.internal.pageSize.getHeight()
       const margin = 20
       const fontName = doc.getFontList()['BCLiguria'] ? 'BCLiguria' : 'helvetica'
+      const bodyFont = 'helvetica' // Cuerpo siempre en helvetica por métricas consistentes
 
       // Logo MSH en texto BC Liguria
       doc.setFont(fontName, 'bold')
@@ -432,7 +433,7 @@ export default function Home() {
         if (y > pageH - 30) { doc.addPage(); y = 20 }
         doc.setFont(fontName, 'bold'); doc.setFontSize(9); doc.setTextColor(200, 169, 110)
         doc.text(tituloSec.toUpperCase(), margin, y); y += 5
-        doc.setFont(fontName, 'normal'); doc.setFontSize(9); doc.setTextColor(40, 40, 40)
+        doc.setFont(bodyFont, 'normal'); doc.setFontSize(9); doc.setTextColor(40, 40, 40)
         const lista = Array.isArray(items) ? items : [items]
         for (const item of lista) {
           if (!item) continue
@@ -528,6 +529,7 @@ export default function Home() {
       const pageH = doc.internal.pageSize.getHeight()
       const margin = 20
       const fontName = doc.getFontList()['BCLiguria'] ? 'BCLiguria' : 'helvetica'
+      const bodyFont = 'helvetica' // Cuerpo siempre en helvetica por métricas consistentes
 
       // Header — MSH en texto, sin imagen
       // Logo MSH en texto BC Liguria
@@ -566,7 +568,7 @@ export default function Home() {
         doc.setTextColor(200, 169, 110)
         doc.text(tituloSec.toUpperCase(), margin, y)
         y += 5
-        doc.setFont(fontName, 'normal')
+        doc.setFont(bodyFont, 'normal')
         doc.setFontSize(9)
         doc.setTextColor(40, 40, 40)
         const lista = Array.isArray(items) ? items : [items]
