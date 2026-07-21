@@ -211,39 +211,6 @@ export async function POST(request) {
     const alertaIds = []
     if (tipo === 'nc' && guardarCalidad && ncData?.items?.length > 0) {
 
-      // Buscar user_id de Eric
-      const ericRes = await fetch(`${url}/xmlrpc/2/object`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/xml' },
-        body: `<?xml version="1.0"?>
-<methodCall>
-  <methodName>execute_kw</methodName>
-  <params>
-    <param><value><string>${DB}</string></value></param>
-    <param><value><int>${uid}</int></value></param>
-    <param><value><string>${apiKey}</string></value></param>
-    <param><value><string>res.users</string></value></param>
-    <param><value><string>search_read</string></value></param>
-    <param><value><array><data>
-      <value><array><data>
-        <value><array><data>
-          <value><string>login</string></value>
-          <value><string>=</string></value>
-          <value><string>eric@grupomsh.com.ar</string></value>
-        </data></array></value>
-      </data></array></value>
-    </data></array></value></param>
-    <param><value><struct>
-      <member><name>fields</name><value><array><data><value><string>id</string></value></data></array></value></member>
-      <member><name>limit</name><value><int>1</int></value></member>
-    </struct></value></param>
-  </params>
-</methodCall>`
-      })
-      const ericXml = await ericRes.text()
-      const ericIdM = ericXml.match(/<name>id<\/name>\s*<value><int>(\d+)<\/int>/)
-      const ericUserId = ericIdM ? parseInt(ericIdM[1]) : null
-
       const prioridad = PRIORIDAD_MAP[ncData.urgencia] || PRIORIDAD_MAP[ncData.gravedad] || '0'
 
       // Obtener el último número de NC para numeración correlativa
@@ -291,7 +258,7 @@ export async function POST(request) {
         // Origen: usar reason_id del frontend si viene, sino mapear por causa del item
         const reasonId = ncData.origenReasonId || CAUSA_MAP[item.causa] || null
         const reasonMember = reasonId ? `<member><name>reason_id</name><value><int>${reasonId}</int></value></member>` : ''
-        const ericMember = ericUserId ? `<member><name>user_id</name><value><int>${ericUserId}</int></value></member>` : ''
+        // Responsable: queda vacío — se asigna manualmente desde ODOO o vía selector futuro
 
         // Pieza texto libre (cuando no hay lote catalogado)
         const textoLibreMember = item.textoLibre
@@ -325,7 +292,6 @@ export async function POST(request) {
         <member><name>description</name><value><string>${descHtml}</string></value></member>
         <member><name>priority</name><value><string>${prioridad}</string></value></member>
         ${reasonMember}
-        ${ericMember}
         ${productMember}
         ${lotMember}
         ${textoLibreMember}
