@@ -831,6 +831,12 @@ export default function Home() {
                               onMouseDown={() => seleccionarProyecto(p)}
                             >
                               <span className={styles.searchResultNombre}>{p.nombre}</span>
+                              <span style={{
+                                fontSize: 10, fontWeight: 600, padding: '1px 6px', borderRadius: 4,
+                                background: p.origen === 'project' ? '#1a4d2e' : '#2d2a1e',
+                                color: p.origen === 'project' ? '#4ade80' : '#c8a96e',
+                                marginLeft: 6, flexShrink: 0
+                              }}>{p.origen === 'project' ? 'PROYECTO' : 'CRM'}</span>
                               {p.comercial && <span className={styles.searchResultComercial}>{p.comercial}</span>}
                             </button>
                           ))}
@@ -1399,7 +1405,10 @@ export default function Home() {
                 </div>
                 <div className={styles.resultRow}>
                   <span className={styles.resultLabel}>Obra</span>
-                  <span className={styles.resultValue}>{result.proyecto_id ? `#${result.proyecto_id} — ` : ''}{result.obra || '—'}</span>
+                  <span className={styles.resultValue}>{result.proyecto_id ? `#${result.proyecto_id} — ` : ''}{result.obra || '—'}
+                    {proyectoSeleccionado?.origen === 'project' && <span style={{ fontSize:10, fontWeight:600, padding:'1px 6px', borderRadius:4, background:'#1a4d2e', color:'#4ade80', marginLeft:8 }}>PROYECTO</span>}
+                    {proyectoSeleccionado?.origen === 'crm' && <span style={{ fontSize:10, fontWeight:600, padding:'1px 6px', borderRadius:4, background:'#2d2a1e', color:'#c8a96e', marginLeft:8 }}>CRM</span>}
+                  </span>
                 </div>
                 {result.comercial && (
                   <div className={styles.resultRow}>
@@ -1468,7 +1477,10 @@ export default function Home() {
                 </div>
                 <div className={styles.resultRow}>
                   <span className={styles.resultLabel}>Proyecto</span>
-                  <span className={styles.resultValue}>{result.proyecto_id ? `#${result.proyecto_id} — ` : ''}{result.proyecto || '—'}</span>
+                  <span className={styles.resultValue}>{result.proyecto_id ? `#${result.proyecto_id} — ` : ''}{result.proyecto || '—'}
+                    {proyectoSeleccionado?.origen === 'project' && <span style={{ fontSize:10, fontWeight:600, padding:'1px 6px', borderRadius:4, background:'#1a4d2e', color:'#4ade80', marginLeft:8 }}>PROYECTO</span>}
+                    {proyectoSeleccionado?.origen === 'crm' && <span style={{ fontSize:10, fontWeight:600, padding:'1px 6px', borderRadius:4, background:'#2d2a1e', color:'#c8a96e', marginLeft:8 }}>CRM</span>}
+                  </span>
                 </div>
                 {result.comercial && (
                   <div className={styles.resultRow}>
