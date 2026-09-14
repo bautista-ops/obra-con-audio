@@ -511,25 +511,18 @@ export default function Home() {
       const { jsPDF } = window.jspdf
       const doc = new jsPDF({ unit: 'mm', format: 'a4' })
 
-      // Cargar BC Liguria y logo
+      // PDF para ODOO: sin BC Liguria embebida para compatibilidad con Gmail y visores externos
       let logoB64 = null
       try {
-        const [fontRes, logoRes] = await Promise.all([
-          fetch('/BCLiguria-Regular-b64.txt'),
-          fetch('/logo-pdf-b64.txt'),
-        ])
-        const fontB64 = await fontRes.text()
-        doc.addFileToVFS('BCLiguria-Regular.ttf', fontB64)
-        doc.addFont('BCLiguria-Regular.ttf', 'BCLiguria', 'normal')
-        doc.addFont('BCLiguria-Regular.ttf', 'BCLiguria', 'bold')
+        const logoRes = await fetch('/logo-pdf-b64.txt')
         logoB64 = await logoRes.text()
-      } catch(e) { console.warn('Assets no disponibles, usando defaults') }
+      } catch(e) { console.warn('Logo no disponible') }
 
       const pageW = doc.internal.pageSize.getWidth()
       const pageH = doc.internal.pageSize.getHeight()
       const margin = 20
-      const fontName = doc.getFontList()['BCLiguria'] ? 'BCLiguria' : 'helvetica'
-      const bodyFont = 'helvetica' // Cuerpo siempre en helvetica por métricas consistentes
+      const fontName = 'helvetica'
+      const bodyFont = 'helvetica'
 
       // Header — MSH en texto, sin imagen
       // Logo MSH en texto BC Liguria
@@ -634,6 +627,7 @@ export default function Home() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           proyecto_id: result.proyecto_id,
+          proyecto_origen: proyectoSeleccionado?.origen || 'crm',
           tipo: result.tipo,
           fecha: result.fecha,
           obra: result.obra || result.proyecto,

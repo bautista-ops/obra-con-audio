@@ -74,27 +74,31 @@ async function crearAdjunto(url, apiKey, uid, nombre, base64, mimeType, resModel
 
 export async function POST(request) {
   try {
-    const { proyecto_id, tipo, fecha, obra, pdf_base64, pdf_nombre, ncData, destino, fotosMinuta } = await request.json()
+    const { proyecto_id, proyecto_origen, tipo, fecha, obra, pdf_base64, pdf_nombre, ncData, destino, fotosMinuta } = await request.json()
 
     if (!proyecto_id || !pdf_base64) {
       return Response.json({ error: 'Faltan datos requeridos' }, { status: 400 })
     }
+
+    // Determinar modelo ODOO según origen del proyecto
+    const esProject = proyecto_origen === 'project'
+    const modeloProyecto = esProject ? 'project.project' : 'crm.lead'
 
     const url = process.env.ODOO_URL
     const apiKey = process.env.ODOO_API_KEY
     const uid = await odooAuth()
     if (!uid) return Response.json({ error: 'Auth ODOO fallida' }, { status: 401 })
 
-    console.log('[guardar-odoo] destino:', destino, '| ncData items:', ncData?.items?.length, '| proyecto_id:', proyecto_id)
+    console.log('[guardar-odoo] destino:', destino, '| origen:', proyecto_origen, '| modelo:', modeloProyecto, '| proyecto_id:', proyecto_id)
     const guardarCRM = !destino || destino === 'crm' || destino === 'ambos'
     const guardarCalidad = !destino || destino === 'calidad' || destino === 'ambos'
 
     let adjuntoId = null
     let msgId = null
 
-    // ── CRM ──────────────────────────────────────────────
+    // ── CRM / PROJECT ──────────────────────────────────────────────
     if (guardarCRM) {
-      adjuntoId = await crearAdjunto(url, apiKey, uid, pdf_nombre, pdf_base64, 'application/pdf', 'crm.lead', proyecto_id)
+      adjuntoId = await crearAdjunto(url, apiKey, uid, pdf_nombre, pdf_base64, 'application/pdf', modeloProyecto, proyecto_id)
 
       const partnerRes = await fetch(`${url}/xmlrpc/2/object`, {
         method: 'POST',
@@ -151,7 +155,7 @@ export async function POST(request) {
     <param><value><string>${DB}</string></value></param>
     <param><value><int>${uid}</int></value></param>
     <param><value><string>${apiKey}</string></value></param>
-    <param><value><string>crm.lead</string></value></param>
+    <param><value><string>${modeloProyecto}</string></value></param>
     <param><value><string>message_post</string></value></param>
     <param><value><array><data><value><int>${proyecto_id}</int></value></data></array></value></param>
     <param><value><struct>
@@ -174,7 +178,7 @@ export async function POST(request) {
           for (let idx = 0; idx < (item.imagenes || []).length; idx++) {
             const img = item.imagenes[idx]
             const nombre = `NC_${(item.lote || 'pieza').replace(/[^a-z0-9]/gi, '_')}_foto${idx + 1}.jpg`
-            await crearAdjunto(url, apiKey, uid, nombre, img.base64, 'image/jpeg', 'crm.lead', proyecto_id)
+            await crearAdjunto(url, apiKey, uid, nombre, img.base64, 'image/jpeg', modeloProyecto, proyecto_id)
           }
         }
       }
@@ -202,7 +206,7 @@ export async function POST(request) {
         const foto = fotosMinuta[i]
         const base64 = foto.base64 || (foto.startsWith('data:') ? foto.split(',')[1] : foto)
         const nombre = `foto_minuta_${i + 1}.jpg`
-        await crearAdjunto(url, apiKey, uid, nombre, base64, 'image/jpeg', 'crm.lead', proyecto_id)
+        await crearAdjunto(url, apiKey, uid, nombre, base64, 'image/jpeg', modeloProyecto, proyecto_id)
       }
       console.log(`[guardar-odoo] ${fotosMinuta.length} fotos de minuta adjuntadas al CRM`)
     }
