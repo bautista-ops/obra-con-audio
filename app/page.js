@@ -511,73 +511,81 @@ export default function Home() {
       const { jsPDF } = window.jspdf
       const doc = new jsPDF({ unit: 'mm', format: 'a4' })
 
-      // PDF para ODOO: sin BC Liguria embebida para compatibilidad con Gmail y visores externos
+      // PDF para ODOO: recargar jsPDF limpio para evitar contaminación de BC Liguria
+      delete window.jspdf
+      await new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'
+        script.onload = resolve; script.onerror = reject
+        document.head.appendChild(script)
+      })
+      const doc2 = new window.jspdf.jsPDF({ unit: 'mm', format: 'a4' })
+
       let logoB64 = null
       try {
         const logoRes = await fetch('/logo-pdf-b64.txt')
         logoB64 = await logoRes.text()
       } catch(e) { console.warn('Logo no disponible') }
 
-      const pageW = doc.internal.pageSize.getWidth()
-      const pageH = doc.internal.pageSize.getHeight()
+      const pageW = doc2.internal.pageSize.getWidth()
+      const pageH = doc2.internal.pageSize.getHeight()
       const margin = 20
       const fontName = 'helvetica'
       const bodyFont = 'helvetica'
 
-      // Forzar helvetica y resetear cualquier estado de fuente anterior
-      doc.setFont('helvetica', 'normal')
-      doc.setCharSpace(0)
-      doc.setFontSize(10)
+      doc2.setFont('helvetica', 'normal')
+      doc2.setCharSpace(0)
+      doc2.setFontSize(10)
 
       // Header — MSH en texto, sin imagen
       // Logo MSH en texto BC Liguria
-      doc.setFont(fontName, 'bold')
-      doc.setFontSize(22)
-      doc.setTextColor(20, 20, 20)
-      doc.text('MSH', margin, 18)
-      doc.setFont(fontName, 'normal')
-      doc.setFontSize(8)
-      doc.setTextColor(150, 150, 150)
-      doc.text('Shaping the future of Metal', margin + 20, 18)
+      doc2.setFont(fontName, 'bold')
+      doc2.setFontSize(22)
+      doc2.setTextColor(20, 20, 20)
+      doc2.text('MSH', margin, 18)
+      doc2.setFont(fontName, 'normal')
+      doc2.setFontSize(8)
+      doc2.setTextColor(150, 150, 150)
+      doc2.text('Shaping the future of Metal', margin + 20, 18)
 
-      doc.setDrawColor(200, 169, 110)
-      doc.setLineWidth(0.5)
-      doc.line(margin, 22, pageW - margin, 22)
+      doc2.setDrawColor(200, 169, 110)
+      doc2.setLineWidth(0.5)
+      doc2.line(margin, 22, pageW - margin, 22)
 
-      doc.setFont(fontName, 'bold')
-      doc.setFontSize(13)
-      doc.setTextColor(20, 20, 20)
+      doc2.setFont(fontName, 'bold')
+      doc2.setFontSize(13)
+      doc2.setTextColor(20, 20, 20)
       const titulo = result.tipo === 'minuta' ? 'MINUTA DE REUNIÓN DE OBRA' : 'NO CONFORMIDAD — REPORTE'
-      doc.text(titulo, margin, 31)
+      doc2.text(titulo, margin, 31)
 
-      doc.setFont(fontName, 'normal')
-      doc.setFontSize(10)
-      doc.setTextColor(100, 100, 100)
-      doc.text(result.obra || result.proyecto || '', margin, 38)
-      doc.text(result.fecha || new Date().toLocaleDateString('es-AR'), pageW - margin, 38, { align: 'right' })
+      doc2.setFont(fontName, 'normal')
+      doc2.setFontSize(10)
+      doc2.setTextColor(100, 100, 100)
+      doc2.text(result.obra || result.proyecto || '', margin, 38)
+      doc2.text(result.fecha || new Date().toLocaleDateString('es-AR'), pageW - margin, 38, { align: 'right' })
 
       let y = 47
 
       const addSeccion = (tituloSec, items) => {
         if (!items || (Array.isArray(items) && items.length === 0)) return
-        if (y > pageH - 30) { doc.addPage(); y = 20 }
-        doc.setCharSpace(0)
-        doc.setFont('helvetica', 'bold')
-        doc.setFontSize(9)
-        doc.setTextColor(200, 169, 110)
-        doc.text(tituloSec.toUpperCase(), margin, y)
+        if (y > pageH - 30) { doc2.addPage(); y = 20 }
+        doc2.setCharSpace(0)
+        doc2.setFont('helvetica', 'bold')
+        doc2.setFontSize(9)
+        doc2.setTextColor(200, 169, 110)
+        doc2.text(tituloSec.toUpperCase(), margin, y)
         y += 5
-        doc.setCharSpace(0)
-        doc.setFont('helvetica', 'normal')
-        doc.setFontSize(9)
-        doc.setTextColor(40, 40, 40)
+        doc2.setCharSpace(0)
+        doc2.setFont('helvetica', 'normal')
+        doc2.setFontSize(9)
+        doc2.setTextColor(40, 40, 40)
         const lista = Array.isArray(items) ? items : [items]
         for (const item of lista) {
           if (!item) continue
-          const lineas = doc.splitTextToSize('• ' + item, pageW - margin * 2)
+          const lineas = doc2.splitTextToSize('• ' + item, pageW - margin * 2)
           for (const linea of lineas) {
-            if (y > pageH - 30) { doc.addPage(); y = 20 }
-            doc.text(linea, margin, y)
+            if (y > pageH - 30) { doc2.addPage(); y = 20 }
+            doc2.text(linea, margin, y)
             y += 5
           }
         }
@@ -593,16 +601,16 @@ export default function Home() {
         addSeccion('Próxima visita', [result.proxima_visita])
         // Fotos de minuta en PDF guardar
         if (fotosMinuta && fotosMinuta.length > 0) {
-          if (y > pageH - 60) { doc.addPage(); y = 20 }
-          doc.setFont(fontName, 'bold'); doc.setFontSize(9); doc.setTextColor(200, 169, 110)
-          doc.text('FOTOS DE LA REUNIÓN', margin, y); y += 6
+          if (y > pageH - 60) { doc2.addPage(); y = 20 }
+          doc2.setFont(fontName, 'bold'); doc2.setFontSize(9); doc2.setTextColor(200, 169, 110)
+          doc2.text('FOTOS DE LA REUNIÓN', margin, y); y += 6
           const fW = 40; const fH = 30; const gap = 4; let xF = margin
           for (const foto of fotosMinuta) {
             const b64 = foto.base64 || (typeof foto === 'string' && foto.startsWith('data:') ? foto.split(',')[1] : foto)
             if (!b64) continue
             if (xF + fW > pageW - margin) { xF = margin; y += fH + gap }
-            if (y + fH > pageH - 20) { doc.addPage(); y = 20; xF = margin }
-            try { doc.addImage('data:image/jpeg;base64,' + b64, 'JPEG', xF, y, fW, fH) } catch(e) {}
+            if (y + fH > pageH - 20) { doc2.addPage(); y = 20; xF = margin }
+            try { doc2.addImage('data:image/jpeg;base64,' + b64, 'JPEG', xF, y, fW, fH) } catch(e) {}
             xF += fW + gap
           }
           y += fH + 6
@@ -618,13 +626,13 @@ export default function Home() {
         addSeccion('Clasificación', [result.clasificacion])
       }
 
-      doc.setDrawColor(200, 169, 110)
-      doc.line(margin, pageH - 15, pageW - margin, pageH - 15)
-      doc.setFontSize(7)
-      doc.setTextColor(150, 150, 150)
-      doc.text('MSH. Shaping the future of Metal  |  +5411 5263 0413  |  info@grupomsh.com.ar  |  www.grupomsh.com.ar', pageW / 2, pageH - 9, { align: 'center' })
+      doc2.setDrawColor(200, 169, 110)
+      doc2.line(margin, pageH - 15, pageW - margin, pageH - 15)
+      doc2.setFontSize(7)
+      doc2.setTextColor(150, 150, 150)
+      doc2.text('MSH. Shaping the future of Metal  |  +5411 5263 0413  |  info@grupomsh.com.ar  |  www.grupomsh.com.ar', pageW / 2, pageH - 9, { align: 'center' })
 
-      const pdfBase64 = doc.output('datauristring').split(',')[1]
+      const pdfBase64 = doc2.output('datauristring').split(',')[1]
       const obraSlug = (result.obra || result.proyecto || 'msh').replace(/[^a-z0-9]/gi, '_')
       const fechaSlug = (result.fecha || '').replace(/\//g, '-')
       const nombreArchivo = 'minuta_' + obraSlug + '_' + fechaSlug + '.pdf'
