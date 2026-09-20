@@ -521,19 +521,27 @@ export default function Home() {
       })
       const doc2 = new window.jspdf.jsPDF({ unit: 'mm', format: 'a4' })
 
+      // Cargar BC Liguria y logo — doc2 arranca limpio, sin riesgo de charSpace
       let logoB64 = null
       try {
-        const logoRes = await fetch('/logo-pdf-b64.txt')
+        const [fontRes, logoRes] = await Promise.all([
+          fetch('/BCLiguria-Regular-b64.txt'),
+          fetch('/logo-pdf-b64.txt'),
+        ])
+        const fontB64 = await fontRes.text()
+        doc2.addFileToVFS('BCLiguria-Regular.ttf', fontB64)
+        doc2.addFont('BCLiguria-Regular.ttf', 'BCLiguria', 'normal')
+        doc2.addFont('BCLiguria-Regular.ttf', 'BCLiguria', 'bold')
         logoB64 = await logoRes.text()
-      } catch(e) { console.warn('Logo no disponible') }
+      } catch(e) { console.warn('Assets no disponibles') }
 
       const pageW = doc2.internal.pageSize.getWidth()
       const pageH = doc2.internal.pageSize.getHeight()
       const margin = 20
-      const fontName = 'helvetica'
+      const fontName = doc2.getFontList()['BCLiguria'] ? 'BCLiguria' : 'helvetica'
       const bodyFont = 'helvetica'
 
-      doc2.setFont('helvetica', 'normal')
+      doc2.setFont(bodyFont, 'normal')
       doc2.setCharSpace(0)
       doc2.setFontSize(10)
 
