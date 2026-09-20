@@ -458,7 +458,7 @@ export default function Home() {
           if (y > pageH - 60) { doc.addPage(); y = 20 }
           doc.setFont(fontName, 'bold'); doc.setFontSize(9); doc.setTextColor(200, 169, 110)
           doc.text('FOTOS DE LA REUNIÓN', margin, y); y += 6
-          const fW = 55; const fH = 40; const gap = 5; let xF = margin
+          const fW = 40; const fH = 30; const gap = 4; let xF = margin
           for (const foto of fotosMinuta) {
             const b64 = foto.base64 || (typeof foto === 'string' && foto.startsWith('data:') ? foto.split(',')[1] : foto)
             if (!b64) continue
@@ -467,7 +467,7 @@ export default function Home() {
             try { doc.addImage('data:image/jpeg;base64,' + b64, 'JPEG', xF, y, fW, fH) } catch(e) {}
             xF += fW + gap
           }
-          y += fH + 8
+          y += fH + 6
         }
       } else {
         addSeccion('Producto', [result.producto])
@@ -596,7 +596,7 @@ export default function Home() {
           if (y > pageH - 60) { doc.addPage(); y = 20 }
           doc.setFont(fontName, 'bold'); doc.setFontSize(9); doc.setTextColor(200, 169, 110)
           doc.text('FOTOS DE LA REUNIÓN', margin, y); y += 6
-          const fW = 55; const fH = 40; const gap = 5; let xF = margin
+          const fW = 40; const fH = 30; const gap = 4; let xF = margin
           for (const foto of fotosMinuta) {
             const b64 = foto.base64 || (typeof foto === 'string' && foto.startsWith('data:') ? foto.split(',')[1] : foto)
             if (!b64) continue
@@ -605,7 +605,7 @@ export default function Home() {
             try { doc.addImage('data:image/jpeg;base64,' + b64, 'JPEG', xF, y, fW, fH) } catch(e) {}
             xF += fW + gap
           }
-          y += fH + 8
+          y += fH + 6
         }
       } else {
         addSeccion('Producto', [result.producto + (result.terminacion ? ' — ' + result.terminacion : '')])
