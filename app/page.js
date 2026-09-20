@@ -545,13 +545,14 @@ export default function Home() {
       doc2.setCharSpace(0)
       doc2.setFontSize(10)
 
-      // Header — MSH en texto, sin imagen
-      // Logo MSH en texto BC Liguria
+      // Header — MSH en BC Liguria, resto en Helvetica
       doc2.setFont(fontName, 'bold')
+      doc2.setCharSpace(0)
       doc2.setFontSize(22)
       doc2.setTextColor(20, 20, 20)
       doc2.text('MSH', margin, 18)
-      doc2.setFont(fontName, 'normal')
+      doc2.setFont('helvetica', 'normal')
+      doc2.setCharSpace(0)
       doc2.setFontSize(8)
       doc2.setTextColor(150, 150, 150)
       doc2.text('Shaping the future of Metal', margin + 20, 18)
@@ -560,13 +561,15 @@ export default function Home() {
       doc2.setLineWidth(0.5)
       doc2.line(margin, 22, pageW - margin, 22)
 
-      doc2.setFont(fontName, 'bold')
+      doc2.setFont('helvetica', 'bold')
+      doc2.setCharSpace(0)
       doc2.setFontSize(13)
       doc2.setTextColor(20, 20, 20)
       const titulo = result.tipo === 'minuta' ? 'MINUTA DE REUNIÓN DE OBRA' : 'NO CONFORMIDAD — REPORTE'
       doc2.text(titulo, margin, 31)
 
-      doc2.setFont(fontName, 'normal')
+      doc2.setFont('helvetica', 'normal')
+      doc2.setCharSpace(0)
       doc2.setFontSize(10)
       doc2.setTextColor(100, 100, 100)
       doc2.text(result.obra || result.proyecto || '', margin, 38)
@@ -577,14 +580,16 @@ export default function Home() {
       const addSeccion = (tituloSec, items) => {
         if (!items || (Array.isArray(items) && items.length === 0)) return
         if (y > pageH - 30) { doc2.addPage(); y = 20 }
+        // Títulos en BC Liguria — texto corto, charSpace no se nota
+        doc2.setFont(fontName, 'bold')
         doc2.setCharSpace(0)
-        doc2.setFont('helvetica', 'bold')
         doc2.setFontSize(9)
         doc2.setTextColor(200, 169, 110)
         doc2.text(tituloSec.toUpperCase(), margin, y)
         y += 5
-        doc2.setCharSpace(0)
+        // Cuerpo siempre en Helvetica — evita el charSpace bug de BC Liguria
         doc2.setFont('helvetica', 'normal')
+        doc2.setCharSpace(0)
         doc2.setFontSize(9)
         doc2.setTextColor(40, 40, 40)
         const lista = Array.isArray(items) ? items : [items]
@@ -593,6 +598,8 @@ export default function Home() {
           const lineas = doc2.splitTextToSize('• ' + item, pageW - margin * 2)
           for (const linea of lineas) {
             if (y > pageH - 30) { doc2.addPage(); y = 20 }
+            doc2.setFont('helvetica', 'normal')
+            doc2.setCharSpace(0)
             doc2.text(linea, margin, y)
             y += 5
           }
